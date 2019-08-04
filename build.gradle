@@ -34,8 +34,8 @@ repositories {
 }
 
 compileJava {
-    sourceCompatibility = 8
-    targetCompatibility = 8
+    sourceCompatibility = 11
+    targetCompatibility = 11
     options.encoding = 'UTF-8'
     options.compilerArgs = [ '-Xlint:all', '-Werror' ]
 }

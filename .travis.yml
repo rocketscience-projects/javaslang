@@ -1,21 +1,26 @@
 language: java
+
 sudo: false
 dist: trusty
+
 env:
   global:
+  - # ossrhUsername
   - secure: GwuNkNkV6QUnThmV+ZsiPuR+M50sVN+7qT+Ca9qRiXAhbUJpV0kcQz+NSV/gDE9UmsdzKfPzsSaKPjtIbKN9gFzFsOCd99TXGD1n3Kkya//Pw1ziDOtZFI9EMjO/8qPIEIR+Cfk7niqpyET/ypC7aklxv8raiCVrPDXJ8TJWsYM=
+  - # ossrhPassword
   - secure: i+gbt9z+eCnGV1TadNWPrkOgxmeTYUvfkQYOvVQ01cqkTeNL5YKoWx3cpoidEvx4Bj00XkNqXXvMEBViEgnVlA4Xqm8n/05WcVr6uJ/HFq1hkBTiVl5LJEvXH4NBVoEZJTY4h9B7ulMHqvhM9U/vTBYbjK+L+9OC6B+U/IJe2Ho=
+
 matrix:
   include:
-  - jdk: oraclejdk8
-  - jdk: oraclejdk9
-  - jdk: openjdk10
   - jdk: openjdk11
-  - jdk: openjdk12
     env: DEPLOY=true
+  - jdk: openjdk12
+  - jdk: openjdk-13
   - jdk: openjdk-ea
   allow_failures:
+  - jdk: openjdk-13
   - jdk: openjdk-ea
+
 before_cache:
 - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
 - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
@@ -23,8 +28,17 @@ cache:
   directories:
   - "$HOME/.gradle/caches/"
   - "$HOME/.gradle/wrapper/"
-before_install: unset _JAVA_OPTIONS
+
+before_install:
+- export GRADLE_JAVA_HOME="$JAVA_HOME"
+- unset _JAVA_OPTIONS
+
 install: echo "Disabled Travis CI 'install' stage by default"
+
+script:
+- ./gradlew check --info -Dorg.gradle.java.home="$GRADLE_JAVA_HOME"
+- if [ -n "$(git status -su src-gen)" ]; then exit 1; fi
+
 after_success:
-- bash <(curl -s https://codecov.io/bash)
-- if [[ -n $DEPLOY ]]; then ./gradlew uploadArchives; fi
+- if [[ -n $DEPLOY ]]; then bash <(curl -s https://codecov.io/bash); fi
+- if [[ -n $DEPLOY ]] && [ "$TRAVIS_REPO_SLUG" == "vavr-io/vavr" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "v2.0.0" ]; then ./gradlew uploadArchives -PossrhUsername="$ossrhUsername" -PossrhPassword="$ossrhPassword"; fi
