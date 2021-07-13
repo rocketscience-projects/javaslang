@@ -647,16 +647,6 @@ public final class HashSet<T> implements Set<T>, Serializable {
         }
     }
 
-    /**
-     * A {@code HashSet} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
     @Override
     public boolean isEmpty() {
         return tree.isEmpty();
@@ -928,7 +918,7 @@ public final class HashSet<T> implements Set<T>, Serializable {
     public int hashCode() {
         return Collections.hashUnordered(this);
     }
-
+    
     @Override
     public String stringPrefix() {
         return "HashSet";

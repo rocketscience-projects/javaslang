@@ -36,7 +36,7 @@ abstract class AbstractQueue<T, Q extends AbstractQueue<T, Q>> implements Traver
      */
     public Tuple2<T, Q> dequeue() {
         if (isEmpty()) {
-            throw new NoSuchElementException("dequeue of empty " + getClass().getSimpleName());
+            throw new NoSuchElementException("dequeue of empty " + stringPrefix());
         } else {
             return Tuple.of(head(), tail());
         }
@@ -91,7 +91,7 @@ abstract class AbstractQueue<T, Q extends AbstractQueue<T, Q>> implements Traver
      */
     public T peek() {
         if (isEmpty()) {
-            throw new NoSuchElementException("peek of empty " + getClass().getSimpleName());
+            throw new NoSuchElementException("peek of empty " + stringPrefix());
         } else {
             return head();
         }

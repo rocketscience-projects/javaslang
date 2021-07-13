@@ -35,6 +35,11 @@ import static org.junit.Assert.assertTrue;
 public class HashSetTest extends AbstractSetTest {
 
     @Override
+    protected String stringPrefix() {
+        return "HashSet";
+    }
+
+    @Override
     protected <T> IterableAssert<T> assertThat(Iterable<T> actual) {
         return new IterableAssert<T>(actual) {
             @Override
@@ -314,7 +319,7 @@ public class HashSetTest extends AbstractSetTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        final String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

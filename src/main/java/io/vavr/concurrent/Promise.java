@@ -22,7 +22,6 @@ import io.vavr.control.Try;
 
 import java.util.Objects;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 
 import static io.vavr.concurrent.Future.DEFAULT_EXECUTOR;
@@ -199,23 +198,7 @@ public interface Promise<T> {
      *
      * @return The underlying {@code Executor}.
      */
-    default Executor executor() {
-        return executorService();
-    }
-
-    /**
-     * This method is deprecated.
-     * <p>
-     * THE DEFAULT IMPLEMENTATION (obtained by one of the {@link Promise} factory methods) MIGHT THROW AN
-     * {@link UnsupportedOperationException} AT RUNTIME, DEPENDING ON WHAT {@link Future#executorService()}
-     * returns.
-     *
-     * @return (never)
-     * @throws UnsupportedOperationException if the underlying {@link Executor} isn't an {@link ExecutorService}.
-     * @deprecated Removed starting with Vavr 0.10.0, use {@link #executor()} instead.
-     */
-    @Deprecated
-    ExecutorService executorService();
+    Executor executor();
 
     /**
      * Returns the underlying {@link Future} of this {@code Promise}.
@@ -337,12 +320,6 @@ final class PromiseImpl<T> implements Promise<T> {
     @Override
     public Executor executor() {
         return future.executor();
-    }
-
-    @Deprecated
-    @Override
-    public ExecutorService executorService() {
-        return future.executorService();
     }
 
     @Override

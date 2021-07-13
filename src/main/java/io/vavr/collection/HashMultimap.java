@@ -492,6 +492,11 @@ public final class HashMultimap<K, V> extends AbstractMultimap<K, V, HashMultima
     }
 
     @Override
+    public String stringPrefix() {
+        return "HashMultimap";
+    }
+
+    @Override
     protected <K2, V2> Map<K2, V2> emptyMapSupplier() {
         return HashMap.empty();
     }

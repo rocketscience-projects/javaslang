@@ -38,6 +38,11 @@ import static io.vavr.collection.Stream.concat;
 
 public class StreamTest extends AbstractLinearSeqTest {
 
+    @Override
+    protected String stringPrefix() {
+        return "Stream";
+    }
+
     // -- construction
 
     @Override
@@ -327,28 +332,28 @@ public class StreamTest extends AbstractLinearSeqTest {
 
     @Test
     public void shouldGenerateInfiniteStreamBasedOnSupplier() {
-        assertThat(Stream.continually(() -> 1).take(13).reduce((i, j) -> i + j)).isEqualTo(13);
+        assertThat(Stream.continually(() -> 1).take(13).reduce(Integer::sum)).isEqualTo(13);
     }
 
     // -- static iterate(T, Function)
 
     @Test
     public void shouldGenerateInfiniteStreamBasedOnSupplierWithAccessToPreviousValue() {
-        assertThat(Stream.iterate(2, (i) -> i + 2).take(3).reduce((i, j) -> i + j)).isEqualTo(12);
+        assertThat(Stream.iterate(2, (i) -> i + 2).take(3).reduce(Integer::sum)).isEqualTo(12);
     }
 
     // -- static iterate(Supplier<Option>)
 
     @Test
     public void shouldGenerateInfiniteStreamBasedOnOptionSupplier() {
-        assertThat(Stream.iterate(() -> Option.of(1)).take(5).reduce((i, j) -> i + j)).isEqualTo(5);
+        assertThat(Stream.iterate(() -> Option.of(1)).take(5).reduce(Integer::sum)).isEqualTo(5);
     }
 
     // -- static continually (T)
 
     @Test
     public void shouldGenerateInfiniteStreamBasedOnRepeatedElement() {
-        assertThat(Stream.continually(2).take(3).reduce((i, j) -> i + j)).isEqualTo(6);
+        assertThat(Stream.continually(2).take(3).reduce(Integer::sum)).isEqualTo(6);
     }
 
     // -- static cons(T, Supplier)
@@ -750,8 +755,8 @@ public class StreamTest extends AbstractLinearSeqTest {
 
     @Test
     public void shouldReturnSelfOnConvertToStream() {
-        final Value<Integer> value = of(1, 2, 3);
-        assertThat(value.toStream()).isSameAs(value);
+        final Stream<Integer> testee = of(1, 2, 3);
+        assertThat(testee.toStream()).isSameAs(testee);
     }
 
     // -- toString
@@ -784,7 +789,7 @@ public class StreamTest extends AbstractLinearSeqTest {
 
     @Test
     public void shouldTransform() {
-        String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

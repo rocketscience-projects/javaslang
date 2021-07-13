@@ -26,6 +26,8 @@ import io.vavr.collection.Seq;
 import java.io.Serializable;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -72,7 +74,6 @@ import java.util.function.Supplier;
  * @param <T> value type in the case of valid
  * @see <a href="https://github.com/scalaz/scalaz/blob/series/7.3.x/core/src/main/scala/scalaz/Validation.scala">Validation</a>
  */
-@SuppressWarnings("deprecation")
 public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -111,10 +112,9 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * Creates a {@code Validation} of an {@code Either}.
      *
      * <pre>{@code
-     * // validates the either type if either is right then validation
-     * // contains right value otherwise throws NoSuchElementException
-     * // Creates Validation instance with the value "vavr"
+     * // = Valid("vavr")
      * Validation<?, String> validation = Validation.fromEither(Either.right("vavr"));
+     *
      * // throws NoSuchElementException
      * Validation<String, ?> validation = Validation.fromEither(Either.left("vavr"));
      * }</pre>
@@ -134,10 +134,9 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * Creates a {@code Validation} of an {@code Try}.
      *
      * <pre>{@code
-     * // validates the Try types if Try is success then validation will contain the
-     * // success value otherwise throws NoSuchElementException.
-     * // Creates Validation instance with the value "vavr"
+     * // = Valid("vavr")
      * Validation<? super Exception, ?> validation = Validation.fromTry(Try.success("vavr"));
+     *
      * // throws NoSuchElementException
      * Validation<? super Exception, ?> validation = Validation.fromTry(Try.failure(new Throwable("Bad")));
      * }</pre>
@@ -158,10 +157,9 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * {@code Iterable<Validation<? extends T>>} into a {@code Validation<Seq<T>>}.
      *
      * <pre>{@code
-     * // creates a sequence of validation from list of validations or throws NullPointerException
-     * // when validations are null.
-     * // following code results in sequence of List.of(1, 2))
+     * // = Valid(List(1, 2))
      * Validation.sequence(List.of(Validation.valid(1), Validation.valid(2)));
+     *
      * // throws NullPointerException
      * Validation.sequence(null);
      * }</pre>
@@ -205,10 +203,8 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * transforming an {@code Iterable<? extends T>} into a {@code Validation<Seq<U>>}.
      *
      * <pre>{@code
-     * // following code transforms each element into a sequence of validation. Validation.valid(List.of(1, 2));
-     * Validation<?, ?> validation = Validation.traverse(List.of(1, 2), t -> Validation.valid(t));
-     * // throws NullPointerException when values and mapper are null
-     * Validation.traverse(null, null);
+     * // = Valid(List(1, 2))
+     * Validation.traverse(List.of(1, 2), t -> Validation.valid(t));
      * }</pre>
      *
      * @param values   An {@code Iterable} of values.
@@ -230,13 +226,6 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * by performing a type-safe cast. This is eligible because immutable/read-only
      * collections are covariant.
      *
-     * <pre>{@code
-     * // following code narrows Validation<String, Integer> to Validation<CharSequence, Number>
-     * Validation<String, Integer> validation = Validation.valid(42);
-     * // following code throws an error with the error message "vavr"
-     * Validation<String, Integer> validation = Validation.invalid("vavr");
-     * }</pre>
-     *
      * @param validation A {@code Validation}.
      * @param <E>        type of error
      * @param <T>        type of valid value
@@ -251,11 +240,15 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * Combines two {@code Validation}s into a {@link Builder}.
      *
      * <pre>{@code
-     * // following code joins two validations into one which result in Validation.Builder2
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * validation1.combine(validation2);
-     * // throws NullPointerException if one of the validation is null.
+     * // validate some inputs
+     * Validation<Exception, String> validation1 = Validation.valid("vavr");
+     * Validation<Exception, Integer> validation2 = Validation.valid(1);
+     *
+     * // combine two validation instances
+     * Builder<Exception, String, Integer> builder = validation1.combine(validation2);
+     *
+     * // = Valid("vavr1")
+     * Validation<Seq<Exception>, String> result = builder.ap((s, i) -> s + i);
      * }</pre>
      *
      * @param <E>         type of error
@@ -274,15 +267,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines three {@code Validation}s into a {@link Builder3}.
-     *
-     * <pre>{@code
-     * // following code joins three validations into one which result in Validation.Builder3
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * validation1.combine(validation2, validation3);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -303,16 +288,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines four {@code Validation}s into a {@link Builder4}.
-     *
-     * <pre>{@code
-     * // following code joins four validations into one which result in Validation.Builder4
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * Validation<? super Exception, ?> validation4 = Validation.valid("vavr4");
-     * validation1.combine(validation2, validation3, validation4);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -336,18 +312,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines five {@code Validation}s into a {@link Builder5}.
-     *
-     * <pre>{@code
-     * Validation.sequence(List.of(Validation.valid(1), Validation.valid(2)))
-     * // following code joins five validations into one which result in Validation.Builder5
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * Validation<? super Exception, ?> validation4 = Validation.valid("vavr4");
-     * Validation<? super Exception, ?> validation5 = Validation.valid("vavr5");
-     * validation1.combine(validation2, validation3, validation4, validation5);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -374,18 +339,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines six {@code Validation}s into a {@link Builder6}.
-     *
-     * <pre>{@code
-     * // following code joins six validations into one which result in Validation.Builder6
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * Validation<? super Exception, ?> validation4 = Validation.valid("vavr4");
-     * Validation<? super Exception, ?> validation5 = Validation.valid("vavr5");
-     * Validation<? super Exception, ?> validation6 = Validation.valid("vavr6");
-     * validation1.combine(validation2, validation3, validation4, validation5, validation6);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -415,19 +369,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines seven {@code Validation}s into a {@link Builder7}.
-     *
-     * <pre>{@code
-     * // following code joins seven validations into one which result in Validation.Builder7
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * Validation<? super Exception, ?> validation4 = Validation.valid("vavr4");
-     * Validation<? super Exception, ?> validation5 = Validation.valid("vavr5");
-     * Validation<? super Exception, ?> validation6 = Validation.valid("vavr6");
-     * Validation<? super Exception, ?> validation7 = Validation.valid("vavr7");
-     * validation1.combine(validation2, validation3, validation4, validation5, validation6, validation7);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -460,20 +402,7 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
 
     /**
      * Combines eight {@code Validation}s into a {@link Builder8}.
-     *
-     * <pre>{@code
-     * // following code joins eight validations into one which result in Validation.Builder8
-     * Validation<? super Exception, ?> validation1 = Validation.valid("vavr1");
-     * Validation<? super Exception, ?> validation2 = Validation.valid("vavr2");
-     * Validation<? super Exception, ?> validation3 = Validation.valid("vavr3");
-     * Validation<? super Exception, ?> validation4 = Validation.valid("vavr4");
-     * Validation<? super Exception, ?> validation5 = Validation.valid("vavr5");
-     * Validation<? super Exception, ?> validation6 = Validation.valid("vavr6");
-     * Validation<? super Exception, ?> validation7 = Validation.valid("vavr7");
-     * Validation<? super Exception, ?> validation8 = Validation.valid("vavr8");
-     * validation1.combine(validation2, validation3, validation4, validation5, validation6, validation7, validation8);
-     * // throws NullPointerException if one of the validation is null.
-     * }</pre>
+     * For example, see {@link #combine(Validation, Validation)}.
      *
      * @param <E>         type of error
      * @param <T1>        type of first valid value
@@ -544,9 +473,8 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * Returns this {@code Validation} if it is valid, otherwise return the result of evaluating supplier.
      *
      * <pre>{@code
-     * // following code return an alternative Supplier validation("vavr") when there is an error in first validation
-     * Validation<? super Exception, ?> errorInValidation = Validation.invalid(Error.class);
-     * Validation<? super Exception, ?> validation = errorInValidation.orElse(() -> Validation.valid("vavr"));
+     * // = Valid("vavr")
+     * Validation.invalid(Error.class).orElse(() -> Validation.valid("vavr"));
      * }</pre>
      *
      * @param supplier An alternative {@code Validation} supplier
@@ -558,29 +486,63 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
         return isValid() ? this : (Validation<E, T>) supplier.get();
     }
 
-    @Override
+    /**
+     * Checks, this {@code Validation} is empty, i.e. if the underlying value is absent.
+     *
+     * @return true, if this is {@code Invalid}, false otherwise
+     */
     public final boolean isEmpty() {
         return isInvalid();
     }
 
     /**
-     * Gets the value of this {@code Validation} if is a {@code Valid} or throws if this is an {@code Invalid}.
+     * Gets the value of this {@code Validation} if this is a {@code Valid} or throws if this is an {@code Invalid}.
      *
      * @return The value of this {@code Validation}
      * @throws NoSuchElementException if this is an {@code Invalid}
      */
-    @Override
     public abstract T get();
+
+    /**
+     * Returns the underlying value if this is a {@code Valid}, otherwise {@code other}.
+     *
+     * @param other An alternative value.
+     * @return A value of type {@code T}
+     */
+    public T getOrElse(T other) {
+        return isEmpty() ? other : get();
+    }
+
+    /**
+     * Returns the underlying value if this is a {@code Right}, otherwise {@code supplier.get()}.
+     * <p>
+     * Please note, that the alternate value is lazily evaluated.
+     *
+     * <pre>{@code
+     * Supplier<Double> supplier = () -> 5.342;
+     *
+     * // = 1.2
+     * Validation.valid(1.2).getOrElse(supplier);
+     *
+     * // = 5.342
+     * Validation.invalid("").getOrElse(supplier);
+     * }</pre>
+     *
+     * @param supplier An alternative value supplier.
+     * @return A value of type {@code R}
+     * @throws NullPointerException if supplier is null
+     */
+    public T getOrElse(Supplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        return isEmpty() ? supplier.get() : get();
+    }
 
     /**
      * Gets the value if it is a Valid or an value calculated from the error.
      *
      * <pre>{@code
-     * // following code applies a function if the validation contains invalid data.
-     * Validation<? super Exception, ?> validation =  Validation.invalid(1);
-     * Function<Integer, Integer> function = number -> number + 1;
-     * validation.getOrElseGet(function);
-     * // otherwise if the validation contains valid then it returns valid data.
+     * // = 2
+     * Validation.invalid(1).getOrElseGet(i -> i + 1);
      * }</pre>
      *
      * @param other a function which converts an error to an alternative value
@@ -597,6 +559,24 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
     }
 
     /**
+     * Returns the underlying value if this is a {@code Valid}, otherwise throws {@code exceptionSupplier.get()}.
+     *
+     * @param <X>      a Throwable type
+     * @param exceptionSupplier An exception supplier.
+     * @return A value of type {@code T}.
+     * @throws NullPointerException if exceptionSupplier is null
+     * @throws X                    if no value is present
+     */
+    public final <X extends Throwable> T getOrElseThrow(Supplier<X> exceptionSupplier) throws X {
+        Objects.requireNonNull(exceptionSupplier, "exceptionSupplier is null");
+        if (isEmpty()) {
+            throw exceptionSupplier.get();
+        } else {
+            return get();
+        }
+    }
+
+    /**
      * Gets the error of this Validation if it is an {@code Invalid} or throws if this is a {@code Valid}.
      *
      * @return The error, if present
@@ -605,13 +585,25 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
     public abstract E getError();
 
     /**
+     * Converts this to an {@link Option}.
+     *
+     * <pre>{@code
+     * // = Some(1)
+     * Validation.valid(1).toOption();
+     * }</pre>
+     *
+     * @return {@code Option.some(get())} if this is valid, otherwise {@code Option.none()}.
+     */
+    public final Option<T> toOption() {
+        return isEmpty() ? Option.none() : Option.some(get());
+    }
+
+    /**
      * Converts this Validation to an {@link Either}.
      *
      * <pre>{@code
-     * // following code converts validations of valid type to Either right type.
-     * Validation<? super Exception, ?> validation =  Validation.valid(1);
-     * Either<? super Exception, ?> either = validation.toEither();
-     * // otherwise if the validation contains invalid then it returns Either left type.
+     * // = Right(1)
+     * Validation.valid(1).toEither();
      * }</pre>
      *
      * @return {@code Either.right(get())} if this is valid, otherwise {@code Either.left(getError())}.
@@ -657,6 +649,12 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
         return isValid() ? ifValid.apply(get()) : ifInvalid.apply(getError());
     }
 
+    @Override
+    public final Spliterator<T> spliterator() {
+        return Spliterators.spliterator(iterator(), isEmpty() ? 0 : 1,
+                Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+    }
+
     /**
      * Flip the valid/invalid values for this Validation. If this is a Valid&lt;E,T&gt;, returns Invalid&lt;T,E&gt;.
      * Or if this is an Invalid&lt;E,T&gt;, return a Valid&lt;T,E&gt;.
@@ -673,7 +671,13 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
         }
     }
 
-    @Override
+    /**
+     * Maps the underlying value to a different component type.
+     *
+     * @param f      A mapper
+     * @param <U>    The new component type
+     * @return A new value
+     */
     public final <U> Validation<E, U> map(Function<? super T, ? extends U> f) {
         Objects.requireNonNull(f, "f is null");
         if (isInvalid()) {
@@ -689,7 +693,13 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
      * Validation, bimap allows you to provide mapping actions for both, and will give you the result based
      * on what type of Validation this is. Without this, you would have to do something like:
      *
+     * <pre>{@code
+     * // use
+     * validation.bimap(..., ...);
+     *
+     * // instead of
      * validation.map(...).mapError(...);
+     * }</pre>
      *
      * @param <E2>        type of the mapping result if this is an invalid
      * @param <T2>        type of the mapping result if this is a valid
@@ -798,50 +808,6 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
     }
 
     @Override
-    public final Validation<E, T> peek(Consumer<? super T> action) {
-        Objects.requireNonNull(action, "action is null");
-
-        if (isValid()) {
-            action.accept(get());
-        }
-        return this;
-    }
-
-    public final Validation<E, T> peekError(Consumer<? super E> action) {
-        Objects.requireNonNull(action, "action is null");
-
-        if (isInvalid()) {
-            action.accept(getError());
-        }
-        return this;
-    }
-
-    /**
-     * A {@code Validation}'s value is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isAsync() {
-        return false;
-    }
-
-    /**
-     * A {@code Validation}'s value is computed eagerly.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isLazy() {
-        return false;
-    }
-
-    @Override
-    public final boolean isSingleValued() {
-        return true;
-    }
-
-    @Override
     public final Iterator<T> iterator() {
         return isValid() ? Iterator.of(get()) : Iterator.empty();
     }
@@ -900,13 +866,8 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
         }
 
         @Override
-        public String stringPrefix() {
-            return "Valid";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + value + ")";
+            return "Valid(" + value + ")";
         }
 
     }
@@ -965,13 +926,8 @@ public abstract class Validation<E, T> implements Iterable<T>, Value<T>, Seriali
         }
 
         @Override
-        public String stringPrefix() {
-            return "Invalid";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + error + ")";
+            return "Invalid(" + error + ")";
         }
 
     }

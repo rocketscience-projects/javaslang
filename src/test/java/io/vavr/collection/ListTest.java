@@ -36,6 +36,11 @@ import java.util.stream.Collector;
 
 public class ListTest extends AbstractLinearSeqTest {
 
+    @Override
+    protected String stringPrefix() {
+        return "List";
+    }
+
     // -- construction
 
     @Override
@@ -337,7 +342,7 @@ public class ListTest extends AbstractLinearSeqTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        final String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

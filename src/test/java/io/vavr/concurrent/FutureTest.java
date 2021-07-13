@@ -128,11 +128,6 @@ public class FutureTest extends AbstractValueTest {
         return true;
     }
 
-    @Override
-    protected int getPeekNonNilPerformingAnAction() {
-        return 1;
-    }
-
     // -- static failed()
 
     @Test
@@ -351,105 +346,6 @@ public class FutureTest extends AbstractValueTest {
     private static <T> T expensiveOperation(T value) throws InterruptedException {
         Thread.sleep(500);
         return value;
-    }
-
-    // -- static ofSupplier()
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingTrivialExecutorServiceAndSupplier() {
-        final Future<Integer> future = Future.ofSupplier(TRIVIAL_EXECUTOR, () -> 1);
-        assertThat(future.executor()).isSameAs(TRIVIAL_EXECUTOR);
-        assertCompleted(future, 1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenExecutorIsNullUsingSupplier() {
-        Future.ofSupplier(null, () -> 1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenSupplierIsNull() {
-        Future.ofSupplier(TRIVIAL_EXECUTOR, null);
-    }
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingDefaultExecutorServiceAndSupplier() {
-        final Future<Integer> future = Future.ofSupplier(() -> 1);
-        assertThat(future.executor()).isSameAs(Future.DEFAULT_EXECUTOR);
-        future.await();
-        assertThat(future.get()).isEqualTo(1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEUsingDefaultExecutorWhenSupplierIsNull() {
-        Future.ofSupplier(null);
-    }
-
-    // -- static ofCallable()
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingTrivialExecutorServiceAndCallable() {
-        final Future<Integer> future = Future.ofCallable(TRIVIAL_EXECUTOR, () -> 1);
-        assertThat(future.executor()).isSameAs(TRIVIAL_EXECUTOR);
-        assertCompleted(future, 1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenExecutorIsNullUsingCallable() {
-        Future.ofCallable(null, () -> 1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenCallableIsNull() {
-        Future.ofCallable(TRIVIAL_EXECUTOR, null);
-    }
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingDefaultExecutorServiceAndCallable() {
-        final Future<Integer> future = Future.ofCallable(() -> 1);
-        assertThat(future.executor()).isSameAs(Future.DEFAULT_EXECUTOR);
-        future.await();
-        assertThat(future.get()).isEqualTo(1);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEUsingDefaultExecutorWhenCallableIsNull() {
-        Future.ofCallable(null);
-    }
-
-    // -- static runRunnable()
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingTrivialExecutorServiceAndRunnable() {
-        final int[] sideEffect = new int[] { 0 };
-        final Future<Void> future = Future.runRunnable(TRIVIAL_EXECUTOR, () -> sideEffect[0] = 42);
-        assertThat(future.executor()).isSameAs(TRIVIAL_EXECUTOR);
-        future.await();
-        assertThat(sideEffect[0]).isEqualTo(42);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenExecutorIsNullUsingRunnable() {
-        Future.runRunnable(null, () -> {});
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEWhenRunnableIsNull() {
-        Future.runRunnable(TRIVIAL_EXECUTOR, null);
-    }
-
-    @Test
-    public void shouldCreateAndCompleteAFutureUsingDefaultExecutorServiceAndRunnable() {
-        final int[] sideEffect = new int[] { 0 };
-        final Future<Void> future = Future.runRunnable(() -> sideEffect[0] = 42);
-        assertThat(future.executor()).isSameAs(Future.DEFAULT_EXECUTOR);
-        future.await();
-        assertThat(sideEffect[0]).isEqualTo(42);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldThrowNPEUsingDefaultExecutorWhenRunnableIsNull() {
-        Future.runRunnable(null);
     }
 
     // -- static reduce()
@@ -690,8 +586,8 @@ public class FutureTest extends AbstractValueTest {
 
     @Test
     public void shouldFoldNonEmptyIterableOfFailingFutures() {
-        final Seq<Future<Integer>> futures = Stream.from(1).map(i -> Future.<Integer> of(zZz(new Error()))).take(5);
-        final Future<Integer> testee = Future.fold(futures, 0, (a, b) -> a + b).await();
+        Iterable<Future<Integer>> futures = Stream.from(1).map(i -> Future.<Integer>of(zZz(new Error()))).take(5);
+        final Future<Integer> testee = Future.fold(futures, 0, Integer::sum).await();
         assertFailed(testee, Error.class);
     }
 
@@ -844,15 +740,6 @@ public class FutureTest extends AbstractValueTest {
     public void shouldThrowWhenGettingValueOfFailedFuture() {
         final Error error = new Error();
         assertThat(Future.failed(error).getValue()).isEqualTo(Option.some(Try.failure(error)));
-    }
-
-    // -- isAsync
-
-    @Override
-    @Test
-    public void shouldVerifyAsyncProperty() {
-        assertThat(empty().isAsync()).isTrue();
-        assertThat(of(1).isAsync()).isTrue();
     }
 
     // -- isCompleted()
@@ -1177,14 +1064,6 @@ public class FutureTest extends AbstractValueTest {
         final Future<Integer> future = Future.of(zZz(42)).map(i -> i * 2);
         future.await();
         assertThat(future.get()).isEqualTo(84);
-    }
-
-    @Test
-    public void shouldPeekFuture() {
-        final int[] consumer = new int[] { -1 };
-        Future.of(zZz(42)).peek(i -> consumer[0] = i);
-        waitUntil(() -> consumer[0] > 0);
-        assertThat(consumer[0]).isEqualTo(42);
     }
 
     @Test

@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 public class TreeMultimapTest extends AbstractMultimapTest {
 
     @Override
-    protected String className() {
+    protected String stringPrefix() {
         return "TreeMultimap[" + containerName() + "]";
     }
 

@@ -704,16 +704,6 @@ public final class TreeSet<T> implements SortedSet<T>, Serializable {
         }
     }
 
-    /**
-     * A {@code TreeSet} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
     @Override
     public boolean isEmpty() {
         return tree.isEmpty();

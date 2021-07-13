@@ -712,16 +712,6 @@ public final class Array<T> implements IndexedSeq<T>, Serializable {
     }
 
     /**
-     * An {@code Array} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
-    /**
      * An {@code Array} is computed eagerly.
      *
      * @return false

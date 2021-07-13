@@ -142,7 +142,7 @@ public abstract class AbstractMultimapTest extends AbstractTraversableTest {
         return emptyMap();
     }
 
-    abstract protected String className();
+    abstract protected String stringPrefix();
 
     abstract <T1, T2> java.util.Map<T1, T2> javaEmptyMap();
 
@@ -447,9 +447,9 @@ public abstract class AbstractMultimapTest extends AbstractTraversableTest {
         Multimap<Integer, String> multimap = emptyMap();
         multimap = multimap.put(1, "a").put(1, "b").put(1, "b");
         if (containerType == Multimap.ContainerType.SEQ) {
-            assertThat(multimap.toString()).isEqualTo(className() + "((1, a), (1, b), (1, b))");
+            assertThat(multimap.toString()).isEqualTo(this.stringPrefix() + "((1, a), (1, b), (1, b))");
         } else {
-            assertThat(multimap.toString()).isEqualTo(className() + "((1, a), (1, b))");
+            assertThat(multimap.toString()).isEqualTo(this.stringPrefix() + "((1, a), (1, b))");
         }
     }
 
@@ -993,8 +993,8 @@ public abstract class AbstractMultimapTest extends AbstractTraversableTest {
 
     @Test
     public void shouldMakeString() {
-        assertThat(emptyMap().toString()).isEqualTo(className() + "()");
-        assertThat(emptyIntInt().put(1, 2).toString()).isEqualTo(className() + "(" + Tuple.of(1, 2) + ")");
+        assertThat(emptyMap().toString()).isEqualTo(this.stringPrefix() + "()");
+        assertThat(emptyIntInt().put(1, 2).toString()).isEqualTo(this.stringPrefix() + "(" + Tuple.of(1, 2) + ")");
     }
 
     // -- transform
@@ -1174,13 +1174,6 @@ public abstract class AbstractMultimapTest extends AbstractTraversableTest {
     public void shouldCreateSeqOfSeqUsingCons() {
         // this Traversable test is not suited for Multimaps:
         //   io.vavr.collection.List$Nil cannot be cast to java.lang.Comparable
-    }
-
-    @Override
-    @Test
-    public void shouldConvertToJavaArrayWithTypeHintPrimitiveVoid() {
-        // this Value test is not suited for Multimaps:
-        //   java.lang.NullPointerException at io.vavr.collection.Comparators.lambda$naturalComparator
     }
 
     @Override

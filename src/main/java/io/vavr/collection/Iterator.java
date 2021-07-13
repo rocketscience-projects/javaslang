@@ -1574,11 +1574,6 @@ public interface Iterator<T> extends java.util.Iterator<T>, Traversable<T> {
     }
 
     @Override
-    default T get() {
-        return head();
-    }
-
-    @Override
     default <C> Map<C, Iterator<T>> groupBy(Function<? super T, ? extends C> classifier) {
         return io.vavr.collection.Collections.groupBy(this, classifier, Iterator::ofAll);
     }
@@ -1613,16 +1608,6 @@ public interface Iterator<T> extends java.util.Iterator<T>, Traversable<T> {
     @Override
     default Option<Iterator<T>> initOption() {
         return hasNext() ? Option.some(init()) : Option.none();
-    }
-
-    /**
-     * An {@code Iterator} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    default boolean isAsync() {
-        return false;
     }
 
     @Override
@@ -1955,7 +1940,7 @@ public interface Iterator<T> extends java.util.Iterator<T>, Traversable<T> {
         }
     }
 
-
+    @Deprecated // TODO: remove this from Iterator when it does not extend Traversable anymore
     @Override
     default String stringPrefix() {
         return "Iterator";

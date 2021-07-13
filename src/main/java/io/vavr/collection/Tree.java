@@ -313,16 +313,6 @@ public abstract class Tree<T> implements Traversable<T>, Serializable {
         return !(isEmpty() || isLeaf());
     }
 
-    /**
-     * A {@code Tree} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isAsync() {
-        return false;
-    }
-
     @Override
     public final boolean isDistinct() {
         return false;
@@ -713,7 +703,7 @@ public abstract class Tree<T> implements Traversable<T>, Serializable {
     }
 
     @Override
-    public final String stringPrefix() {
+    public String stringPrefix() {
         return "Tree";
     }
 
@@ -781,7 +771,7 @@ public abstract class Tree<T> implements Traversable<T>, Serializable {
     public final <U> Tree<Tuple2<T, U>> zipAll(Iterable<? extends U> that, T thisElem, U thatElem) {
         Objects.requireNonNull(that, "that is null");
         if (isEmpty()) {
-            return io.vavr.collection.Iterator.<U>ofAll(that).map(elem -> Tuple.of(thisElem, elem)).toTree();
+            return Tree.ofAll(io.vavr.collection.Iterator.<U>ofAll(that).map(elem -> Tuple.of(thisElem, elem)));
         } else {
             final java.util.Iterator<? extends U> thatIter = that.iterator();
             final Tree<Tuple2<T, U>> tree = Tree.zipAll((Node<T>) this, thatIter, thatElem);
@@ -1174,7 +1164,7 @@ public abstract class Tree<T> implements Traversable<T>, Serializable {
                     .getChildren()
                     .map(child -> flatMap(child, mapper))
                     .filter(Tree::nonEmpty);
-            return of(mapped.get(), children.prependAll(mapped.getChildren()));
+            return of(mapped.head(), children.prependAll(mapped.getChildren()));
         }
     }
 

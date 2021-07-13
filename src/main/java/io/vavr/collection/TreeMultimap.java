@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
@@ -947,5 +945,10 @@ public final class TreeMultimap<K, V> extends AbstractMultimap<K, V, TreeMultima
     @Override
     public java.util.SortedMap<K, Collection<V>> toJavaMap() {
         return toJavaMap(new java.util.TreeMap<>());
+    }
+
+    @Override
+    public String stringPrefix() {
+        return "TreeMultimap";
     }
 }

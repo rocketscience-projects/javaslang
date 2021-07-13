@@ -288,16 +288,6 @@ final class FutureImpl<T> implements Future<T> {
         return executor;
     }
 
-    @Deprecated
-    @Override
-    public ExecutorService executorService() {
-        if (executor instanceof ExecutorService) {
-            return (ExecutorService) executor;
-        } else {
-            throw new UnsupportedOperationException("Removed starting with Vavr 0.10.0, use executor() instead.");
-        }
-    }
-
     @Override
     public Option<Try<T>> getValue() {
         return value;
@@ -338,7 +328,7 @@ final class FutureImpl<T> implements Future<T> {
     public String toString() {
         final Option<Try<T>> value = this.value;
         final String s = (value == null || value.isEmpty()) ? "?" : value.get().toString();
-        return stringPrefix() + "(" + s + ")";
+        return "Future(" + s + ")";
     }
 
     /**

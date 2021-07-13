@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 public class HashMultimapTest extends AbstractMultimapTest {
 
     @Override
-    protected String className() {
+    protected String stringPrefix() {
         return "HashMultimap[" + containerName() + "]";
     }
 

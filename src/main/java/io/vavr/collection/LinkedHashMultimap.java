@@ -511,4 +511,9 @@ public final class LinkedHashMultimap<K, V> extends AbstractMultimap<K, V, Linke
     public boolean isSequential() {
         return true;
     }
+
+    @Override
+    public String stringPrefix() {
+        return "LinkedHashMultimap";
+    }
 }

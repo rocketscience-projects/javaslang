@@ -25,6 +25,8 @@ import io.vavr.collection.Vector;
 import java.io.Serializable;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -67,7 +69,7 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
      * Constructs a {@link Right}
      *
      * <pre>{@code
-     * // Creates Either instance initiated with right value 1
+     * // = Either instance initiated with right value 1
      * Either<?, Integer> either = Either.right(1);
      * }</pre>
      *
@@ -84,7 +86,7 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
      * Constructs a {@link Left}
      *
      * <pre>{@code
-     * // Creates Either instance initiated with left value "error message"
+     * // = Either instance initiated with left value "error message"
      * Either<String, ?> either = Either.left("error message");
      * }</pre>
      *
@@ -165,28 +167,6 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
      * @return true, if this is a Right, false otherwise
      */
     public abstract boolean isRight();
-
-    /**
-     * Returns a LeftProjection of this Either.
-     *
-     * @return a new LeftProjection of this
-     * @deprecated Either is right-biased. Use {@link #swap()} instead of projections.
-     */
-    @Deprecated
-    public final LeftProjection<L, R> left() {
-        return new LeftProjection<>(this);
-    }
-
-    /**
-     * Returns a RightProjection of this Either.
-     *
-     * @return a new RightProjection of this
-     * @deprecated Either is right-biased. Use {@link #swap()} instead of projections.
-     */
-    @Deprecated
-    public final RightProjection<L, R> right() {
-        return new RightProjection<>(this);
-    }
 
     /**
      * Maps either the left or the right side of this disjunction.
@@ -444,6 +424,24 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
     }
 
     /**
+     * Returns the underlying value if this is a {@code Right}, otherwise throws {@code exceptionSupplier.get()}.
+     *
+     * @param <X>               a Throwable type
+     * @param exceptionSupplier An exception supplier.
+     * @return A value of type {@code R}.
+     * @throws NullPointerException if exceptionSupplier is null
+     * @throws X                    if this is a {@code Left}
+     */
+    public <X extends Throwable> R getOrElseThrow(Supplier<X> exceptionSupplier) throws X {
+        Objects.requireNonNull(exceptionSupplier, "exceptionSupplier is null");
+        if (isRight()) {
+            return get();
+        } else {
+            throw exceptionSupplier.get();
+        }
+    }
+
+    /**
      * Gets the Right value or throws, if the projected Either is a Left.
      *
      * <pre>{@code
@@ -544,7 +542,11 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
         }
     }
 
-    // -- Adjusted return types of Monad methods
+    @Override
+    public final Spliterator<R> spliterator() {
+        return Spliterators.spliterator(iterator(), isEmpty() ? 0 : 1,
+                Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+    }
 
     /**
      * FlatMaps this right-biased Either.
@@ -589,7 +591,6 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
      * @throws NullPointerException if {@code mapper} is null
      */
     @SuppressWarnings("unchecked")
-    @Override
     public final <U> Either<L, U> map(Function<? super R, ? extends U> mapper) {
         Objects.requireNonNull(mapper, "mapper is null");
         if (isRight()) {
@@ -688,10 +689,42 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
      * @return the right value
      * @throws NoSuchElementException if this is a {@code Left}.
      */
-    @Override
     public abstract R get();
 
-    @Override
+    /**
+     * Returns the underlying value if this is a {@code Right}, otherwise {@code other}.
+     *
+     * @param other An alternative value.
+     * @return A value of type {@code R}
+     */
+    public R getOrElse(R other) {
+        return isEmpty() ? other : get();
+    }
+
+    /**
+     * Returns the underlying value if this is a {@code Right}, otherwise {@code supplier.get()}.
+     * <p>
+     * Please note, that the alternate value is lazily evaluated.
+     *
+     * <pre>{@code
+     * Supplier<Double> supplier = () -> 5.342;
+     *
+     * // = 1.2
+     * Either.right(1.2).getOrElse(supplier);
+     *
+     * // = 5.342
+     * Either.left("").getOrElse(supplier);
+     * }</pre>
+     *
+     * @param supplier An alternative value supplier.
+     * @return A value of type {@code R}
+     * @throws NullPointerException if supplier is null
+     */
+    public R getOrElse(Supplier<? extends R> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        return isEmpty() ? supplier.get() : get();
+    }
+
     public final boolean isEmpty() {
         return isLeft();
     }
@@ -706,36 +739,6 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
     public final Either<L, R> orElse(Supplier<? extends Either<? extends L, ? extends R>> supplier) {
         Objects.requireNonNull(supplier, "supplier is null");
         return isRight() ? this : (Either<L, R>) supplier.get();
-    }
-
-    /**
-     * A right-biased {@code Either}'s value is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isAsync() {
-        return false;
-    }
-
-    /**
-     * A right-biased {@code Either}'s value is computed eagerly.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isLazy() {
-        return false;
-    }
-
-    /**
-     * A right-biased {@code Either} is single-valued.
-     *
-     * @return {@code true}
-     */
-    @Override
-    public final boolean isSingleValued() {
-        return true;
     }
 
     @Override
@@ -768,15 +771,6 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
         return this;
     }
 
-    @Override
-    public final Either<L, R> peek(Consumer<? super R> action) {
-        Objects.requireNonNull(action, "action is null");
-        if (isRight()) {
-            action.accept(get());
-        }
-        return this;
-    }
-
     public final Either<L, R> peekLeft(Consumer<? super L> action) {
         Objects.requireNonNull(action, "action is null");
         if (isLeft()) {
@@ -786,533 +780,20 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
     }
 
     /**
-     * Returns this as {@code Validation}.
+     * Converts this to an {@link Option}.
      *
-     * @return {@code Validation.valid(get())} if this is right, otherwise {@code Validation.invalid(getLeft())}.
-     */
-    public final Validation<L, R> toValidation() {
-        return isRight() ? Validation.valid(get()) : Validation.invalid(getLeft());
-    }
-
-    // -- Left/Right projections
-
-    /**
-     * A left projection of an Either.
+     * <pre>{@code
+     * // = Some(1)
+     * Either.right(1).toOption();
      *
-     * @param <L> The type of the Left value of an Either.
-     * @param <R> The type of the Right value of an Either.
-     * @deprecated Either is right-biased. Use {@link #swap()} instead of projections.
-     */
-    @Deprecated
-    public static final class LeftProjection<L, R> implements io.vavr.Value<L> {
-
-        private final Either<L, R> either;
-
-        private LeftProjection(Either<L, R> either) {
-            this.either = either;
-        }
-
-        public <L2, R2> LeftProjection<L2, R2> bimap(Function<? super L, ? extends L2> leftMapper, Function<? super R, ? extends R2> rightMapper) {
-            return either.<L2, R2> bimap(leftMapper, rightMapper).left();
-        }
-
-        /**
-         * A {@code LeftProjection}'s value is computed synchronously.
-         *
-         * @return false
-         */
-        @Override
-        public boolean isAsync() {
-            return false;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return either.isRight();
-        }
-
-        /**
-         * A {@code LeftProjection}'s value is computed eagerly.
-         *
-         * @return false
-         */
-        @Override
-        public boolean isLazy() {
-            return false;
-        }
-
-        /**
-         * A {@code LeftProjection} is single-valued.
-         *
-         * @return {@code true}
-         */
-        @Override
-        public boolean isSingleValued() {
-            return true;
-        }
-
-        /**
-         * Gets the {@code Left} value or throws.
-         *
-         * @return the left value, if the underlying {@code Either} is a {@code Left}
-         * @throws NoSuchElementException if the underlying {@code Either} of this {@code LeftProjection} is a {@code Right}
-         */
-        @Override
-        public L get() {
-            if (either.isLeft()) {
-                return either.getLeft();
-            } else {
-                throw new NoSuchElementException("LeftProjection.get() on Right");
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        public LeftProjection<L, R> orElse(LeftProjection<? extends L, ? extends R> other) {
-            Objects.requireNonNull(other, "other is null");
-            return either.isLeft() ? this : (LeftProjection<L, R>) other;
-        }
-
-        @SuppressWarnings("unchecked")
-        public LeftProjection<L, R> orElse(Supplier<? extends LeftProjection<? extends L, ? extends R>> supplier) {
-            Objects.requireNonNull(supplier, "supplier is null");
-            return either.isLeft() ? this : (LeftProjection<L, R>) supplier.get();
-        }
-
-        /**
-         * Gets the Left value or an alternate value, if the projected Either is a Right.
-         *
-         * @param other an alternative value
-         * @return the left value, if the underlying Either is a Left or else {@code other}
-         * @throws NoSuchElementException if the underlying either of this LeftProjection is a Right
-         */
-        @Override
-        public L getOrElse(L other) {
-            return either.isLeft() ? either.getLeft() : other;
-        }
-
-        /**
-         * Gets the Left value or an alternate value, if the projected Either is a Right.
-         *
-         * @param other a function which converts a Right value to an alternative Left value
-         * @return the left value, if the underlying Either is a Left or else the alternative Left value provided by
-         * {@code other} by applying the Right value.
-         */
-        public L getOrElseGet(Function<? super R, ? extends L> other) {
-            Objects.requireNonNull(other, "other is null");
-            if (either.isLeft()) {
-                return either.getLeft();
-            } else {
-                return other.apply(either.get());
-            }
-        }
-
-        /**
-         * Runs an action in the case this is a projection on a Right value.
-         *
-         * @param action an action which consumes a Right value
-         */
-        public void orElseRun(Consumer<? super R> action) {
-            Objects.requireNonNull(action, "action is null");
-            if (either.isRight()) {
-                action.accept(either.get());
-            }
-        }
-
-        /**
-         * Gets the Left value or throws, if the projected Either is a Right.
-         *
-         * @param <X>               a throwable type
-         * @param exceptionFunction a function which creates an exception based on a Right value
-         * @return the left value, if the underlying Either is a Left or else throws the exception provided by
-         * {@code exceptionFunction} by applying the Right value.
-         * @throws X if the projected Either is a Right
-         */
-        public <X extends Throwable> L getOrElseThrow(Function<? super R, X> exceptionFunction) throws X {
-            Objects.requireNonNull(exceptionFunction, "exceptionFunction is null");
-            if (either.isLeft()) {
-                return either.getLeft();
-            } else {
-                throw exceptionFunction.apply(either.get());
-            }
-        }
-
-        /**
-         * Returns the underlying either of this projection.
-         *
-         * @return the underlying either
-         */
-        public Either<L, R> toEither() {
-            return either;
-        }
-
-        /**
-         * Returns {@code Some} value of type L if this is a left projection of a Left value and the predicate
-         * applies to the underlying value.
-         *
-         * @param predicate A predicate
-         * @return A new Option
-         */
-        public Option<LeftProjection<L, R>> filter(Predicate<? super L> predicate) {
-            Objects.requireNonNull(predicate, "predicate is null");
-            return either.isRight() || predicate.test(either.getLeft()) ? Option.some(this) : Option.none();
-        }
-
-        /**
-         * FlatMaps this LeftProjection.
-         *
-         * @param mapper A mapper
-         * @param <U>    Component type of the mapped left value
-         * @return this as {@code LeftProjection<L, U>} if a Right is underlying, otherwise a the mapping result of the left value.
-         * @throws NullPointerException if {@code mapper} is null
-         */
-        @SuppressWarnings("unchecked")
-        public <U> LeftProjection<U, R> flatMap(Function<? super L, ? extends LeftProjection<? extends U, R>> mapper) {
-            Objects.requireNonNull(mapper, "mapper is null");
-            if (either.isLeft()) {
-                return (LeftProjection<U, R>) mapper.apply(either.getLeft());
-            } else {
-                return (LeftProjection<U, R>) this;
-            }
-        }
-
-        /**
-         * Maps the left value if the projected Either is a Left.
-         *
-         * @param mapper A mapper which takes a left value and returns a value of type U
-         * @param <U>    The new type of a Left value
-         * @return A new LeftProjection
-         */
-        @SuppressWarnings("unchecked")
-        @Override
-        public <U> LeftProjection<U, R> map(Function<? super L, ? extends U> mapper) {
-            Objects.requireNonNull(mapper, "mapper is null");
-            if (either.isLeft()) {
-                return either.mapLeft((Function<L, U>) mapper).left();
-            } else {
-                return (LeftProjection<U, R>) this;
-            }
-        }
-
-        /**
-         * Applies the given action to the value if the projected either is a Left. Otherwise nothing happens.
-         *
-         * @param action An action which takes a left value
-         * @return this LeftProjection
-         */
-        @Override
-        public LeftProjection<L, R> peek(Consumer<? super L> action) {
-            Objects.requireNonNull(action, "action is null");
-            if (either.isLeft()) {
-                action.accept(either.getLeft());
-            }
-            return this;
-        }
-
-        /**
-         * Transforms this {@code LeftProjection}.
-         *
-         * @param f   A transformation
-         * @param <U> Type of transformation result
-         * @return An instance of type {@code U}
-         * @throws NullPointerException if {@code f} is null
-         */
-        public <U> U transform(Function<? super LeftProjection<L, R>, ? extends U> f) {
-            Objects.requireNonNull(f, "f is null");
-            return f.apply(this);
-        }
-
-        @Override
-        public Iterator<L> iterator() {
-            if (either.isLeft()) {
-                return Iterator.of(either.getLeft());
-            } else {
-                return Iterator.empty();
-            }
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return (obj == this) || (obj instanceof LeftProjection && Objects.equals(either, ((LeftProjection<?, ?>) obj).either));
-        }
-
-        @Override
-        public int hashCode() {
-            return either.hashCode();
-        }
-
-        @Override
-        public String stringPrefix() {
-            return "LeftProjection";
-        }
-
-        @Override
-        public String toString() {
-            return stringPrefix() + "(" + either + ")";
-        }
-    }
-
-    /**
-     * A right projection of an Either.
+     * // = None
+     * Either.left("error").toOption();
+     * }</pre>
      *
-     * @param <L> The type of the Left value of an Either.
-     * @param <R> The type of the Right value of an Either.
-     * @deprecated Either is right-biased. Use {@link #swap()} instead of projections.
+     * @return {@code Option.some(get())} if this is right, otherwise {@code Option.none()}.
      */
-    @Deprecated
-    public static final class RightProjection<L, R> implements io.vavr.Value<R> {
-
-        private final Either<L, R> either;
-
-        private RightProjection(Either<L, R> either) {
-            this.either = either;
-        }
-
-        public <L2, R2> RightProjection<L2, R2> bimap(Function<? super L, ? extends L2> leftMapper, Function<? super R, ? extends R2> rightMapper) {
-            return either.<L2, R2> bimap(leftMapper, rightMapper).right();
-        }
-
-        /**
-         * A {@code RightProjection}'s value is computed synchronously.
-         *
-         * @return false
-         */
-        @Override
-        public boolean isAsync() {
-            return false;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return either.isLeft();
-        }
-
-        /**
-         * A {@code RightProjection}'s value is computed eagerly.
-         *
-         * @return false
-         */
-        @Override
-        public boolean isLazy() {
-            return false;
-        }
-
-        /**
-         * A {@code RightProjection} is single-valued.
-         *
-         * @return {@code true}
-         */
-        @Override
-        public boolean isSingleValued() {
-            return true;
-        }
-
-        /**
-         * Gets the {@code Right} value or throws.
-         *
-         * @return the right value, if the underlying {@code Either} is a {@code Right}
-         * @throws NoSuchElementException if the underlying {@code Either} of this {@code RightProjection} is a {@code Left}
-         */
-        @Override
-        public R get() {
-            if (either.isRight()) {
-                return either.get();
-            } else {
-                throw new NoSuchElementException("RightProjection.get() on Left");
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        public RightProjection<L, R> orElse(RightProjection<? extends L, ? extends R> other) {
-            Objects.requireNonNull(other, "other is null");
-            return either.isRight() ? this : (RightProjection<L, R>) other;
-        }
-
-        @SuppressWarnings("unchecked")
-        public RightProjection<L, R> orElse(Supplier<? extends RightProjection<? extends L, ? extends R>> supplier) {
-            Objects.requireNonNull(supplier, "supplier is null");
-            return either.isRight() ? this : (RightProjection<L, R>) supplier.get();
-        }
-
-        /**
-         * Gets the Right value or an alternate value, if the projected Either is a Left.
-         *
-         * @param other an alternative value
-         * @return the right value, if the underlying Either is a Right or else {@code other}
-         * @throws NoSuchElementException if the underlying either of this RightProjection is a Left
-         */
-        @Override
-        public R getOrElse(R other) {
-            return either.getOrElse(other);
-        }
-
-        /**
-         * Gets the Right value or an alternate value, if the projected Either is a Left.
-         *
-         * <pre>{@code
-         * // prints 42
-         * System.out.println(Either.right(42).getOrElseGet(l -> 2));
-         * // prints 0
-         * System.out.println(Either.left(42).getOrElseGet(l -> 0));
-         * }</pre>
-         *
-         * @param other a function which converts a Left value to an alternative Right value
-         * @return the right value, if the underlying Either is a Right or else the alternative Right value provided by
-         * {@code other} by applying the Left value.
-         */
-        public R getOrElseGet(Function<? super L, ? extends R> other) {
-            Objects.requireNonNull(other, "other is null");
-            return either.getOrElseGet(other);
-        }
-
-        /**
-         * Runs an action in the case this is a projection on a Left value.
-         *
-         * <pre>{@code
-         * // nothing is printed
-         * Either.right(42).orElseRun(System.out::println);
-         *
-         * // prints "error message"
-         * Either.left("error message").orElseRun(System.out::println);
-         * }</pre>
-         *
-         * @param action an action which consumes a Left value
-         */
-        public void orElseRun(Consumer<? super L> action) {
-            Objects.requireNonNull(action, "action is null");
-            either.orElseRun(action);
-        }
-
-        /**
-         * Gets the Right value or throws, if the projected Either is a Left.
-         *
-         * <pre>{@code
-         * // prints "42"
-         * System.out.println(Either.<String, Integer> right(42).getOrElseThrow(s -> new RuntimeException(s)));
-         *
-         * // throws RuntimeException("error message")
-         * Either.left("error message").getOrElseThrow(s -> new RuntimeException(s));
-         * }</pre>
-         *
-         * @param <X>               a throwable type
-         * @param exceptionFunction a function which creates an exception based on a Left value
-         * @return the right value, if the underlying Either is a Right or else throws the exception provided by
-         * {@code exceptionFunction} by applying the Left value.
-         * @throws X if the projected Either is a Left
-         */
-        public <X extends Throwable> R getOrElseThrow(Function<? super L, X> exceptionFunction) throws X {
-            Objects.requireNonNull(exceptionFunction, "exceptionFunction is null");
-            return either.getOrElseThrow(exceptionFunction);
-        }
-
-        /**
-         * Returns the underlying either of this projection.
-         *
-         * @return the underlying either
-         */
-        public Either<L, R> toEither() {
-            return either;
-        }
-
-        /**
-         * Returns {@code Some} value of type R if this is a right projection of a Right value and the predicate
-         * applies to the underlying value.
-         *
-         * @param predicate A predicate
-         * @return A new Option
-         */
-        public Option<RightProjection<L, R>> filter(Predicate<? super R> predicate) {
-            Objects.requireNonNull(predicate, "predicate is null");
-            return either.isLeft() || predicate.test(either.get()) ? Option.some(this) : Option.none();
-        }
-
-        /**
-         * FlatMaps this RightProjection.
-         *
-         * @param mapper A mapper
-         * @param <U>    Component type of the mapped right value
-         * @return this as {@code RightProjection<L, U>} if a Left is underlying, otherwise a the mapping result of the right value.
-         * @throws NullPointerException if {@code mapper} is null
-         */
-        @SuppressWarnings("unchecked")
-        public <U> RightProjection<L, U> flatMap(Function<? super R, ? extends RightProjection<L, ? extends U>> mapper) {
-            Objects.requireNonNull(mapper, "mapper is null");
-            if (either.isRight()) {
-                return (RightProjection<L, U>) mapper.apply(either.get());
-            } else {
-                return (RightProjection<L, U>) this;
-            }
-        }
-
-        /**
-         * Maps the right value if the projected Either is a Right.
-         *
-         * @param mapper A mapper which takes a right value and returns a value of type U
-         * @param <U>    The new type of a Right value
-         * @return A new RightProjection
-         */
-        @SuppressWarnings("unchecked")
-        @Override
-        public <U> RightProjection<L, U> map(Function<? super R, ? extends U> mapper) {
-            Objects.requireNonNull(mapper, "mapper is null");
-            if (either.isRight()) {
-                return either.map((Function<R, U>) mapper).right();
-            } else {
-                return (RightProjection<L, U>) this;
-            }
-        }
-
-        /**
-         * Applies the given action to the value if the projected either is a Right. Otherwise nothing happens.
-         *
-         * @param action An action which takes a right value
-         * @return this {@code Either} instance
-         */
-        @Override
-        public RightProjection<L, R> peek(Consumer<? super R> action) {
-            Objects.requireNonNull(action, "action is null");
-            if (either.isRight()) {
-                action.accept(either.get());
-            }
-            return this;
-        }
-
-        /**
-         * Transforms this {@code RightProjection}.
-         *
-         * @param f   A transformation
-         * @param <U> Type of transformation result
-         * @return An instance of type {@code U}
-         * @throws NullPointerException if {@code f} is null
-         */
-        public <U> U transform(Function<? super RightProjection<L, R>, ? extends U> f) {
-            Objects.requireNonNull(f, "f is null");
-            return f.apply(this);
-        }
-
-        @Override
-        public Iterator<R> iterator() {
-            return either.iterator();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return (obj == this) || (obj instanceof RightProjection && Objects.equals(either, ((RightProjection<?, ?>) obj).either));
-        }
-
-        @Override
-        public int hashCode() {
-            return either.hashCode();
-        }
-
-        @Override
-        public String stringPrefix() {
-            return "RightProjection";
-        }
-
-        @Override
-        public String toString() {
-            return stringPrefix() + "(" + either + ")";
-        }
+    public final Option<R> toOption() {
+        return isEmpty() ? Option.none() : Option.some(get());
     }
 
     /**
@@ -1369,13 +850,8 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
         }
 
         @Override
-        public String stringPrefix() {
-            return "Left";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + value + ")";
+            return "Left(" + value + ")";
         }
     }
 
@@ -1433,13 +909,8 @@ public abstract class Either<L, R> implements Iterable<R>, io.vavr.Value<R>, Ser
         }
 
         @Override
-        public String stringPrefix() {
-            return "Right";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + value + ")";
+            return "Right(" + value + ")";
         }
     }
 }

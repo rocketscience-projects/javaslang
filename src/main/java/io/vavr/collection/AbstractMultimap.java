@@ -329,11 +329,6 @@ abstract class AbstractMultimap<K, V, M extends Multimap<K, V>> implements Multi
     }
 
     @Override
-    public boolean isAsync() {
-        return back.isAsync();
-    }
-
-    @Override
     public boolean isEmpty() {
         return back.isEmpty();
     }
@@ -574,13 +569,8 @@ abstract class AbstractMultimap<K, V, M extends Multimap<K, V>> implements Multi
     }
 
     @Override
-    public String stringPrefix() {
-        return getClass().getSimpleName() + "[" + emptyContainer.get().stringPrefix() + "]";
-    }
-
-    @Override
     public String toString() {
-        return mkString(stringPrefix() + "(", ", ", ")");
+        return mkString(stringPrefix() + "[" + emptyContainer.get().stringPrefix() + "](", ", ", ")");
     }
 
     @Override

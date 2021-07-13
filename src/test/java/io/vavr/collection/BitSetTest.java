@@ -31,6 +31,11 @@ public class BitSetTest extends AbstractSortedSetTest {
     }
 
     @Override
+    protected String stringPrefix() {
+        return "BitSet";
+    }
+
+    @Override
     protected <T> IterableAssert<T> assertThat(Iterable<T> actual) {
         return new IterableAssert<T>(actual) {
             @Override
@@ -509,11 +514,7 @@ public class BitSetTest extends AbstractSortedSetTest {
     public void shouldConvertToSortedSetWithoutComparatorOnComparable() {
         final BitSet<Integer> value = BitSet.of(3, 7, 1, 15, 0);
         final Set<Integer> set = value.toSortedSet();
-        if (value.isSingleValued()) {
-            assertThat(set).isEqualTo(TreeSet.of(3));
-        } else {
-            assertThat(set).isEqualTo(TreeSet.of(0, 1, 3, 7, 15));
-        }
+        assertThat(set).isEqualTo(TreeSet.of(0, 1, 3, 7, 15));
     }
 
     // -- toPriorityQueue
@@ -523,11 +524,7 @@ public class BitSetTest extends AbstractSortedSetTest {
     public void shouldConvertToPriorityQueueUsingImplicitComparator() {
         final BitSet<Integer> value = BitSet.of(1, 3, 2);
         final PriorityQueue<Integer> queue = value.toPriorityQueue();
-        if (value.isSingleValued()) {
-            assertThat(queue).isEqualTo(PriorityQueue.of(1));
-        } else {
-            assertThat(queue).isEqualTo(PriorityQueue.of(1, 2, 3));
-        }
+        assertThat(queue).isEqualTo(PriorityQueue.of(1, 2, 3));
     }
 
     @Test
@@ -536,11 +533,7 @@ public class BitSetTest extends AbstractSortedSetTest {
         final Comparator<Integer> comparator = Comparator.naturalOrder();
         final BitSet<Integer> value = BitSet.of(1, 3, 2);
         final PriorityQueue<Integer> queue = value.toPriorityQueue(comparator);
-        if (value.isSingleValued()) {
-            assertThat(queue).isEqualTo(PriorityQueue.of(comparator, 1));
-        } else {
-            assertThat(queue).isEqualTo(PriorityQueue.of(comparator, 1, 2, 3));
-        }
+        assertThat(queue).isEqualTo(PriorityQueue.of(comparator, 1, 2, 3));
     }
 
     // -- map()
@@ -561,7 +554,7 @@ public class BitSetTest extends AbstractSortedSetTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        final String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

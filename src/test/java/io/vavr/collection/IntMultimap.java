@@ -50,8 +50,8 @@ public final class IntMultimap<T> implements Traversable<T>, Serializable {
     }
 
     @Override
-    public boolean isAsync() {
-        return original.isAsync();
+    public String stringPrefix() {
+        return "IntMultimap";
     }
 
     @Override
@@ -78,11 +78,6 @@ public final class IntMultimap<T> implements Traversable<T>, Serializable {
     @Override
     public int hashCode() {
         return original.hashCode();
-    }
-
-    @Override
-    public String stringPrefix() {
-        return "IntMultimap";
     }
 
     @Override

@@ -54,11 +54,6 @@ public final class IntMap<T> implements Traversable<T>, Serializable {
     }
 
     @Override
-    public boolean isAsync() {
-        return original.isAsync();
-    }
-
-    @Override
     public boolean isDistinct() {
         return original.isDistinct();
     }
@@ -80,13 +75,13 @@ public final class IntMap<T> implements Traversable<T>, Serializable {
     }
 
     @Override
-    public String stringPrefix() {
-        return "IntMap";
+    public String toString() {
+        return mkString(stringPrefix() + "(", ", ", ")");
     }
 
     @Override
-    public String toString() {
-        return mkString(stringPrefix() + "(", ", ", ")");
+    public String stringPrefix() {
+        return "IntMap";
     }
 
     @Override

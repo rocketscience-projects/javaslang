@@ -24,9 +24,7 @@ import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.function.*;
 
@@ -625,11 +623,10 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
      *
      * @return The result of this {@code Try}.
      */
-    @Override
     public abstract T get();
 
     /**
-     * Gets the cause if this is a Failure or throws if this is a Success.
+     * Gets the cause if this is a {@code Failure} or throws if this is a {@code Success}.
      *
      * @return The cause if this is a Failure
      * @throws UnsupportedOperationException if this is a Success
@@ -637,13 +634,37 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
     public abstract Throwable getCause();
 
     /**
-     * A {@code Try}'s value is computed synchronously.
+     * Returns the underlying value if this is a {@code Success}, otherwise {@code other}.
      *
-     * @return false
+     * @param other An alternative value.
+     * @return A value of type {@code T}
      */
-    @Override
-    public final boolean isAsync() {
-        return false;
+    public T getOrElse(T other) {
+        return isEmpty() ? other : get();
+    }
+
+    /**
+     * Returns the underlying value if this is a {@code Success}, otherwise {@code supplier.get()}.
+     * <p>
+     * Please note, that the alternate value is lazily evaluated.
+     *
+     * <pre>{@code
+     * Supplier<Double> supplier = () -> 5.342;
+     *
+     * // = 1.2
+     * Try.of(() -> 1.2).getOrElse(supplier);
+     *
+     * // = 5.342
+     * Try.failure(new Exception()).getOrElse(supplier);
+     * }</pre>
+     *
+     * @param supplier An alternative value supplier.
+     * @return A value of type {@code T}
+     * @throws NullPointerException if supplier is null
+     */
+    public T getOrElse(Supplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        return isEmpty() ? supplier.get() : get();
     }
 
     /**
@@ -651,7 +672,6 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
      *
      * @return true if this is a Failure, returns false if this is a Success.
      */
-    @Override
     public abstract boolean isEmpty();
 
     /**
@@ -660,26 +680,6 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
      * @return true, if this is a Failure, otherwise false, if this is a Success
      */
     public abstract boolean isFailure();
-
-    /**
-     * A {@code Try}'s value is computed eagerly.
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isLazy() {
-        return false;
-    }
-
-    /**
-     * A {@code Try} is a single-valued.
-     *
-     * @return {@code true}
-     */
-    @Override
-    public final boolean isSingleValued() {
-        return true;
-    }
 
     /**
      * Checks if this is a Success.
@@ -701,7 +701,6 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
      * @return a {@code Try}
      * @throws NullPointerException if {@code mapper} is null
      */
-    @Override
     public final <U> Try<U> map(Function<? super T, ? extends U> mapper) {
         Objects.requireNonNull(mapper, "mapper is null");
         return mapTry(mapper::apply);
@@ -862,6 +861,24 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
         }
     }
 
+    /**
+     * Returns the underlying value if this is a {@code Success}, otherwise throws {@code exceptionSupplier.get()}.
+     *
+     * @param <X>               a Throwable type
+     * @param exceptionSupplier An exception supplier.
+     * @return A value of type {@code T}.
+     * @throws NullPointerException if exceptionSupplier is null
+     * @throws X                    if no value is present
+     */
+    public final <X extends Throwable> T getOrElseThrow(Supplier<X> exceptionSupplier) throws X {
+        Objects.requireNonNull(exceptionSupplier, "exceptionSupplier is null");
+        if (isEmpty()) {
+            throw exceptionSupplier.get();
+        } else {
+            return get();
+        }
+    }
+
     public final <X extends Throwable> T getOrElseThrow(Function<? super Throwable, X> exceptionProvider) throws X {
         Objects.requireNonNull(exceptionProvider, "exceptionProvider is null");
         if (isFailure()) {
@@ -904,22 +921,6 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
             successAction.accept(get());
         }
 
-        return this;
-    }
-
-    /**
-     * Applies the action to the value of a Success or does nothing in the case of a Failure.
-     *
-     * @param action A Consumer
-     * @return this {@code Try}
-     * @throws NullPointerException if {@code action} is null
-     */
-    @Override
-    public final Try<T> peek(Consumer<? super T> action) {
-        Objects.requireNonNull(action, "action is null");
-        if (isSuccess()) {
-            action.accept(get());
-        }
         return this;
     }
 
@@ -1119,10 +1120,24 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
         }
     }
 
+    @Override
+    public final Spliterator<T> spliterator() {
+        return Spliterators.spliterator(iterator(), isEmpty() ? 0 : 1,
+                Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+    }
+
     /**
      * Converts this {@code Try} to an {@link Either}.
      *
-     * @return A new {@code Either}
+     * <pre>{@code
+     * // = Right(1)
+     * Try.success(1).toEither();
+     *
+     * // = Left(java.lang.Error)
+     * Try.failure(new Error()).toEither();
+     * }</pre>
+     *
+     * @return {@code Either.right(get())} if this is a success, otherwise {@code Either.left(getCause())}.
      */
     public final Either<Throwable, T> toEither() {
         if (isFailure()) {
@@ -1130,6 +1145,43 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
         } else {
             return Either.right(get());
         }
+    }
+
+    /**
+     * Converts this {@code Try} to a {@link java.util.Optional}.
+     *
+     * <pre>{@code
+     * // = Optional[1]
+     * Try.success(1).toJavaOptional();
+     *
+     * // = Optional.empty
+     * Try.success(null).toJavaOptional();
+     *
+     * // = Optional.empty
+     * Try.failure(new Error()).toOption();
+     * }</pre>
+     *
+     * @return A new {@link java.util.Optional}.
+     */
+    public Optional<T> toJavaOptional() {
+        return isEmpty() ? Optional.empty() : Optional.ofNullable(get());
+    }
+
+    /**
+     * Converts this {@code Try} to an {@link Option}.
+     *
+     * <pre>{@code
+     * // = Some(1)
+     * Try.success(1).toOption();
+     *
+     * // = None
+     * Try.failure(new Error()).toOption();
+     * }</pre>
+     *
+     * @return {@code Option.some(get())} if this is a success, otherwise {@code Option.none()}.
+     */
+    public final Option<T> toOption() {
+        return isEmpty() ? Option.none() : Option.some(get());
     }
 
     /**
@@ -1263,13 +1315,8 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
         }
 
         @Override
-        public String stringPrefix() {
-            return "Success";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + value + ")";
+            return  "Success(" + value + ")";
         }
     }
 
@@ -1332,20 +1379,14 @@ public abstract class Try<T> implements Iterable<T>, io.vavr.Value<T>, Serializa
         }
 
         @Override
-        public String stringPrefix() {
-            return "Failure";
-        }
-
-        @Override
         public int hashCode() {
             return Arrays.hashCode(cause.getStackTrace());
         }
 
         @Override
         public String toString() {
-            return stringPrefix() + "(" + cause + ")";
+            return "Failure(" + cause + ")";
         }
-
     }
 
     // -- try with resources

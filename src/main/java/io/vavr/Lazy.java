@@ -29,6 +29,8 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -51,13 +53,9 @@ import java.util.function.Supplier;
  * Example of creating a <em>real</em> lazy value (works only with interfaces):
  *
  * <pre><code>final CharSequence chars = Lazy.val(() -&gt; "Yay!", CharSequence.class);</code></pre>
- *
- * @deprecated Marked for removal. Java isn't a lazy evaluated language. This implementation is ineffective because it is a wrapper. It does not scale well.
  */
 // DEV-NOTE: No flatMap and orElse because this more like a Functor than a Monad.
 //           It represents a value rather than capturing a specific state.
-@Deprecated
-@SuppressWarnings("deprecation")
 public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -139,13 +137,44 @@ public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
         return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] { type }, handler);
     }
 
-    public Option<T> filter(Predicate<? super T> predicate) {
+
+    /**
+     * Lazily filters the underlying value of this {@code Lazy} instance by the given {@code predicate}.
+     *
+     * <pre>{@code
+     * // = Lazy(Some(1))
+     * Lazy.of(() -> 1).filter(i -> i == 1)
+     *
+     * // = Lazy(None)
+     * Lazy.of(() -> 1).filter(i -> i == 2)
+     * }</pre>
+     *
+     * @param predicate a {@link Predicate}
+     * @return a new {@code Lazy} instance
+     */
+    public Lazy<Option<T>> filter(Predicate<? super T> predicate) {
         Objects.requireNonNull(predicate, "predicate is null");
-        final T v = get();
-        return predicate.test(v) ? Option.some(v) : Option.none();
+        return Lazy.of(() -> {
+            final T v = get();
+            return predicate.test(v) ? Option.some(v) : Option.none();
+        });
     }
 
-    public Option<T> filterNot(Predicate<? super T> predicate) {
+    /**
+     * Lazily filters the underlying value of this {@code Lazy} instance by the negation of the given {@code predicate}.
+     *
+     * <pre>{@code
+     * // = Lazy(None)
+     * Lazy.of(() -> 1).filterNot(i -> i == 1)
+     *
+     * // = Lazy(Some(1))
+     * Lazy.of(() -> 1).filterNot(i -> i == 2)
+     * }</pre>
+     *
+     * @param predicate a {@link Predicate}
+     * @return the result of {@link #filter(Predicate)} by calling {@code filter(predicate.negate())}
+     */
+    public Lazy<Option<T>> filterNot(Predicate<? super T> predicate) {
         Objects.requireNonNull(predicate, "predicate is null");
         return filter(predicate.negate());
     }
@@ -171,21 +200,6 @@ public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
     }
 
     /**
-     * A {@code Lazy}'s value is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return false;
-    }
-
-    /**
      * Checks, if this lazy value is evaluated.
      * <p>
      * Note: A value is internally evaluated (once) by calling {@link #get()}.
@@ -197,35 +211,43 @@ public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
         return supplier == null;
     }
 
-    /**
-     * A {@code Lazy}'s value is computed lazily.
-     *
-     * @return true
-     */
-    @Override
-    public boolean isLazy() {
-        return true;
-    }
-
-    @Override
-    public boolean isSingleValued() {
-        return true;
-    }
-
     @Override
     public Iterator<T> iterator() {
         return Iterator.of(get());
     }
 
-    @Override
     public <U> Lazy<U> map(Function<? super T, ? extends U> mapper) {
         return Lazy.of(() -> mapper.apply(get()));
     }
 
-    @Override
+    /**
+     * Lazily performs the given {@code action} if this {@code Lazy} is defined.
+     *
+     * <pre>{@code
+     * import static io.vavr.API.println;
+     *
+     * // does not print anything
+     * Lazy<Integer> testee = Lazy.of(() -> 1).peek(i -> println(i));
+     *
+     * // does print 1
+     * int i = testee.get();
+     * }</pre>
+     *
+     * @param action The action that will be performed on the element
+     * @return a new {@code Lazy} instance
+     */
     public Lazy<T> peek(Consumer<? super T> action) {
-        action.accept(get());
-        return this;
+        return Lazy.of(()-> {
+            final T val = get();
+            action.accept(val);
+            return val;
+        });
+    }
+
+    @Override
+    public final Spliterator<T> spliterator() {
+        return Spliterators.spliterator(iterator(), 1,
+                Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
     }
 
     /**
@@ -242,11 +264,6 @@ public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
     }
 
     @Override
-    public String stringPrefix() {
-        return "Lazy";
-    }
-
-    @Override
     public boolean equals(Object o) {
         return (o == this) || (o instanceof Lazy && Objects.equals(((Lazy<?>) o).get(), get()));
     }
@@ -258,7 +275,7 @@ public final class Lazy<T> implements Value<T>, Supplier<T>, Serializable {
 
     @Override
     public String toString() {
-        return stringPrefix() + "(" + (!isEvaluated() ? "?" : value) + ")";
+        return "Lazy(" + (!isEvaluated() ? "?" : value) + ")";
     }
 
     /**

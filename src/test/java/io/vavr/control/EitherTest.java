@@ -33,7 +33,6 @@ import static io.vavr.API.Left;
 import static io.vavr.API.Right;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SuppressWarnings("deprecation")
 public class EitherTest extends AbstractValueTest {
 
     // -- AbstractValueTest
@@ -59,11 +58,6 @@ public class EitherTest extends AbstractValueTest {
         return true;
     }
 
-    @Override
-    protected int getPeekNonNilPerformingAnAction() {
-        return 1;
-    }
-
     // -- Either
 
     @Test
@@ -74,24 +68,10 @@ public class EitherTest extends AbstractValueTest {
     }
 
     @Test
-    public void shouldBimapLeftProjection() {
-        final Either.LeftProjection<Integer, String> actual = Either.<Integer, String> left(1).left().bimap(i -> i + 1, s -> s + "1");
-        final Either<Integer, String> expected = Either.left(2);
-        assertThat(actual.get()).isEqualTo(expected.getLeft());
-    }
-
-    @Test
     public void shouldBimapRight() {
         final Either<Integer, String> actual = Either.<Integer, String> right("1").bimap(i -> i + 1, s -> s + "1");
         final Either<Integer, String> expected = Either.right("11");
         assertThat(actual).isEqualTo(expected);
-    }
-
-    @Test
-    public void shouldBimapRightProjection() {
-        final Either.RightProjection<Integer, String> actual = Either.<Integer, String> right("1").right().bimap(i -> i + 1, s -> s + "1");
-        final Either<Integer, String> expected = Either.right("11");
-        assertThat(actual.get()).isEqualTo(expected.get());
     }
 
     @Test
@@ -553,22 +533,6 @@ public class EitherTest extends AbstractValueTest {
     @Test
     public void shouldEqualRight() {
         assertThat(Either.right(1)).isEqualTo(Either.right(1));
-    }
-
-    // -- toValidation
-
-    @Test
-    public void shouldConvertToValidValidation() {
-        final Validation<?, Integer> validation = Either.right(42).toValidation();
-        assertThat(validation.isValid()).isTrue();
-        assertThat(validation.get()).isEqualTo(42);
-    }
-
-    @Test
-    public void shouldConvertToInvalidValidation() {
-        final Validation<String, ?> validation = Either.left("vavr").toValidation();
-        assertThat(validation.isInvalid()).isTrue();
-        assertThat(validation.getError()).isEqualTo("vavr");
     }
 
     // hashCode

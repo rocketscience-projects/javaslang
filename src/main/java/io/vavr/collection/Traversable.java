@@ -25,7 +25,9 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.Collector;
 import java.util.stream.DoubleStream;
+import java.util.stream.StreamSupport;
 
 /**
  * An interface for inherently recursive, multi-valued data structures. The order of elements is determined by
@@ -120,6 +122,7 @@ import java.util.stream.DoubleStream;
  * <li>{@link #existsUnique(Predicate)}</li>
  * <li>{@link #hasDefiniteSize()}</li>
  * <li>{@link #isDistinct()}</li>
+ * <li>{@link #isLazy()}</li>
  * <li>{@link #isOrdered()}</li>
  * <li>{@link #isSequential()}</li>
  * <li>{@link #isTraversableAgain()}</li>
@@ -146,10 +149,49 @@ import java.util.stream.DoubleStream;
  * <li>{@link #zipWithIndex()}</li>
  * </ul>
  *
+ * Type conversion:
+ *
+ * <ul>
+ * <li>{@link #collect(Collector)}</li>
+ * <li>{@link #collect(Supplier, BiConsumer, BiConsumer)}</li>
+ * <li>{@link #toArray()}</li>
+ * <li>{@link #toCharSeq()}</li>
+ * <li>{@link #toJavaArray()}</li>
+ * <li>{@link #toJavaArray(IntFunction)}</li>
+ * <li>{@link #toJavaCollection(Function)}</li>
+ * <li>{@link #toJavaList()}</li>
+ * <li>{@link #toJavaList(Function)}</li>
+ * <li>{@link #toJavaMap(Function)}</li>
+ * <li>{@link #toJavaMap(Supplier, Function)}</li>
+ * <li>{@link #toJavaMap(Supplier, Function, Function)} </li>
+ * <li>{@link #toJavaParallelStream()}</li>
+ * <li>{@link #toJavaSet()}</li>
+ * <li>{@link #toJavaSet(Function)}</li>
+ * <li>{@link #toJavaStream()}</li>
+ * <li>{@link #toLinkedMap(Function)}</li>
+ * <li>{@link #toLinkedMap(Function, Function)}</li>
+ * <li>{@link #toLinkedSet()}</li>
+ * <li>{@link #toList()}</li>
+ * <li>{@link #toMap(Function)}</li>
+ * <li>{@link #toMap(Function, Function)}</li>
+ * <li>{@link #toPriorityQueue()}</li>
+ * <li>{@link #toPriorityQueue(Comparator)}</li>
+ * <li>{@link #toQueue()}</li>
+ * <li>{@link #toSet()}</li>
+ * <li>{@link #toSortedMap(Comparator, Function)}</li>
+ * <li>{@link #toSortedMap(Comparator, Function, Function)}</li>
+ * <li>{@link #toSortedMap(Function)}</li>
+ * <li>{@link #toSortedMap(Function, Function)}</li>
+ * <li>{@link #toSortedSet()}</li>
+ * <li>{@link #toSortedSet(Comparator)}</li>
+ * <li>{@link #toStream()}</li>
+ * <li>{@link #toVector()}</li>
+ * </ul>
+ *
  * @param <T> Component type
  */
 @SuppressWarnings("deprecation")
-public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<T> {
+public interface Traversable<T> extends Iterable<T>, Value<T> {
 
     /**
      * Narrows a widened {@code Traversable<? extends T>} to {@code Traversable<T>}
@@ -248,6 +290,42 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      * @throws NullPointerException if {@code partialFunction} is null
      */
     <R> Traversable<R> collect(PartialFunction<? super T, ? extends R> partialFunction);
+
+    /**
+     * Collects this elements (if present) using the provided {@code collector}.
+     *
+     * @param <A>       the mutable accumulation type of the reduction operation
+     * @param <R>       the result type of the reduction operation
+     * @param collector Collector performing reduction
+     * @return R reduction result
+     */
+    default <R, A> R collect(Collector<? super T, A, R> collector) {
+        return StreamSupport.stream(spliterator(), false).collect(collector);
+    }
+
+    /**
+     * Collects this elements (if present) using the given {@code supplier}, {@code accumulator} and
+     * {@code combiner}.
+     *
+     * @param <R>         type of the result
+     * @param supplier    provide unit value for reduction
+     * @param accumulator perform reduction with unit value
+     * @param combiner    function for combining two values, which must be compatible with the accumulator.
+     * @return R reduction result
+     */
+    default <R> R collect(Supplier<R> supplier, BiConsumer<R, ? super T> accumulator, BiConsumer<R, R> combiner) {
+        return StreamSupport.stream(spliterator(), false).collect(supplier, accumulator, combiner);
+    }
+
+    /**
+     * Shortcut for {@code exists(e -> Objects.equals(e, element))}, tests if the given {@code element} is contained.
+     *
+     * @param element An Object of type A, may be null.
+     * @return true, if element is contained, false otherwise.
+     */
+    default boolean contains(T element) {
+        return exists(e -> Objects.equals(e, element));
+    }
 
     /**
      * Tests if this Traversable contains all given elements.
@@ -396,6 +474,23 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
     boolean equals(Object obj);
 
     /**
+     * Checks, if an element exists such that the predicate holds.
+     *
+     * @param predicate A Predicate
+     * @return true, if predicate holds for one or more elements, false otherwise
+     * @throws NullPointerException if {@code predicate} is null
+     */
+    default boolean exists(Predicate<? super T> predicate) {
+        Objects.requireNonNull(predicate, "predicate is null");
+        for (T t : this) {
+            if (predicate.test(t)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Checks, if a unique elements exists such that the predicate holds.
      *
      * @param predicate A Predicate
@@ -537,7 +632,6 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      * @return a folded value
      * @throws NullPointerException if {@code combine} is null
      */
-    @Override
     default <U> U foldLeft(U zero, BiFunction<? super U, ? super T, ? extends U> combine) {
         Objects.requireNonNull(combine, "combine is null");
         U xs = zero;
@@ -566,6 +660,18 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
     <U> U foldRight(U zero, BiFunction<? super T, ? super U, ? extends U> combine);
 
     /**
+     * Checks, if the given predicate holds for all elements.
+     *
+     * @param predicate A Predicate
+     * @return true, if the predicate holds for all elements, false otherwise
+     * @throws NullPointerException if {@code predicate} is null
+     */
+    default boolean forAll(Predicate<? super T> predicate) {
+        Objects.requireNonNull(predicate, "predicate is null");
+        return !exists(predicate.negate());
+    }
+
+    /**
      * Performs an action on each element. In contrast to {@link #forEach(Consumer)},
      * additionally the element's index is passed to the given {@code action}.
      * <p>
@@ -587,17 +693,6 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
         for (T t : this) {
             action.accept(t, index++);
         }
-    }
-
-    /**
-     * Gets the first value in iteration order if this {@code Traversable} is not empty, otherwise throws.
-     *
-     * @return the first value
-     * @throws NoSuchElementException if this {@code Traversable} is empty.
-     */
-    @Override
-    default T get() {
-        return head();
     }
 
     /**
@@ -770,14 +865,19 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
     }
 
     /**
-     * Checks if this Traversable is empty.
+     * Checks if this collection is empty.
      *
      * @return true, if this Traversable contains no elements, false otherwise.
      */
-    @Override
     default boolean isEmpty() {
         return length() == 0;
     }
+
+    /** Checks if this collection is lazily evaluated.
+     *
+     * @return true if this is lazy, false otherwise.
+     */
+    boolean isLazy();
 
     /**
      * Checks if this Traversable is ordered
@@ -794,16 +894,6 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      * @return true, if the insertion order of elements is preserved, false otherwise.
      */
     default boolean isSequential() {
-        return false;
-    }
-
-    /**
-     * Each of Vavr's collections may contain more than one element.
-     *
-     * @return {@code false}
-     */
-    @Override
-    default boolean isSingleValued() {
         return false;
     }
 
@@ -879,7 +969,6 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      * @return a mapped Traversable
      * @throws NullPointerException if {@code mapper} is null
      */
-    @Override
     <U> Traversable<U> map(Function<? super T, ? extends U> mapper);
 
     /**
@@ -1151,7 +1240,14 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      */
     Tuple2<? extends Traversable<T>, ? extends Traversable<T>> partition(Predicate<? super T> predicate);
 
-    @Override
+    /**
+     * Performs the given {@code action} on the first element if this is an <em>eager</em> implementation.
+     * Performs the given {@code action} on all elements (the first immediately, successive deferred),
+     * if this is a <em>lazy</em> implementation.
+     *
+     * @param action The action that will be performed on the element(s).
+     * @return this instance
+     */
     Traversable<T> peek(Consumer<? super T> action);
 
     /**
@@ -1478,6 +1574,15 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
     }
 
     /**
+     * Returns the simple name of this class.
+     * <p>
+     * In general, this name may differ from {@code this.getClass().getSimpleName()}.
+     *
+     * @return a string
+     */
+    String stringPrefix();
+
+    /**
      * Calculates the sum of this elements. Supported component types are {@code Byte}, {@code Double}, {@code Float},
      * {@code Integer}, {@code Long}, {@code Short}, {@code BigInteger} and {@code BigDecimal}.
      * <p>
@@ -1582,6 +1687,543 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
      * @throws NullPointerException if {@code predicate} is null
      */
     Traversable<T> takeWhile(Predicate<? super T> predicate);
+
+    /**
+     * Converts this collection to a {@link Array}. Shortcut for {@code Array.ofAll(this)}.
+     *
+     * @return A new {@link Array}.
+     */
+    default Array<T> toArray() {
+        if (this instanceof Array) {
+            return (Array<T>) this;
+        } else if (isEmpty()) {
+            return Array.empty();
+        } else {
+            return Array.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link CharSeq}.
+     *
+     * @return A new {@link CharSeq}.
+     */
+    default CharSeq toCharSeq() {
+        if (this instanceof CharSeq) {
+            return (CharSeq) this;
+        } else if (isEmpty()) {
+            return CharSeq.empty();
+        } else {
+            return CharSeq.of(iterator().mkString());
+        }
+    }
+
+    /**
+     * Converts this collection to a Java array with component type {@code Object}
+     *
+     * <pre>{@code
+     * // = [1, 2, 3] of type Object[]
+     * List.of(1, 2, 3).toJavaArray()
+     * }</pre>
+     *
+     * @return A new Java array.
+     */
+    default Object[] toJavaArray() {
+        if (isTraversableAgain()) {
+            final Object[] results = new Object[size()];
+            final Iterator<T> iter = iterator();
+            Arrays.setAll(results, i -> iter.next());
+            return results;
+        } else {
+            return toJavaList().toArray();
+        }
+    }
+
+    /**
+     * Converts this collection to a Java array having an accurate component type.
+     *
+     * <pre>{@code
+     * // = [1, 2, 3] of type Integer[]
+     * List.of(1, 2, 3)
+     *     .toJavaArray(Integer[]::new)
+     * }</pre>
+     *
+     * @param arrayFactory an <code>int</code> argument function that
+     *                     creates an array of the correct component
+     *                     type with the specified size
+     * @return The array provided by the factory filled with the values from this <code>Value</code>.
+     * @throws NullPointerException if componentType is null
+     */
+    default T[] toJavaArray(IntFunction<T[]> arrayFactory) {
+        java.util.List<T> javaList = toJavaList();
+        return javaList.toArray(arrayFactory.apply(0)); // toArray(new T[0]) is preferred over toArray(new T[size]) source: https://shipilev.net/blog/2016/arrays-wisdom-ancients/
+    }
+
+    /**
+     * Converts this collection to a specific mutable {@link java.util.Collection} of type {@code C}.
+     * Elements are added by calling {@link java.util.Collection#add(Object)}.
+     *
+     * <pre>{@code
+     * // = [1, 2, 3]
+     * List.of(1, 2, 3)
+     *     .toJavaCollection(java.util.LinkedHashSet::new)
+     * }</pre>
+     *
+     * @param factory A factory that returns an empty mutable {@code java.util.Collection} with the specified initial capacity
+     * @param <C>     a sub-type of {@code java.util.Collection}
+     * @return a new {@code java.util.Collection} of type {@code C}
+     */
+    default <C extends java.util.Collection<T>> C toJavaCollection(Function<Integer, C> factory) {
+        return Collections.toJavaCollection(this, factory);
+    }
+
+    /**
+     * Converts this collection to a mutable {@link java.util.List}.
+     * Elements are added by calling {@link java.util.List#add(Object)}.
+     *
+     * <pre>{@code
+     * // = [1, 2, 3]
+     * List.of(1, 2, 3)
+     *     .toJavaList()
+     * }</pre>
+     *
+     * @return A new {@link java.util.ArrayList}.
+     */
+    default java.util.List<T> toJavaList() {
+        return Collections.toJavaCollection(this, ArrayList::new, 10);
+    }
+
+    /**
+     * Converts this collection to a specific mutable {@link java.util.List}.
+     * Elements are added by calling {@link java.util.List#add(Object)}.
+     *
+     * <pre>{@code
+     * // = [1, 2, 3]
+     * List.of(1, 2, 3)
+     *     .toJavaList(java.util.ArrayList::new)
+     *
+     * // = [1, 2, 3]
+     * List.of(1, 2, 3)
+     *     .toJavaList(capacity -> new java.util.LinkedList<>())
+     * }</pre>
+     *
+     * @param factory A factory that returns an empty mutable {@code java.util.List} with the specified initial capacity
+     * @param <LIST>  A sub-type of {@code java.util.List}
+     * @return a new {@code java.util.List} of type {@code LIST}
+     */
+    default <LIST extends java.util.List<T>> LIST toJavaList(Function<Integer, LIST> factory) {
+        return Collections.toJavaCollection(this, factory);
+    }
+
+    /**
+     * Converts this collection to a mutable {@link java.util.Map}.
+     * Elements are added by calling {@link java.util.Map#put(Object, Object)}.
+     *
+     * <pre>{@code
+     * // = {1=A, 2=B, 3=C}
+     * List.of(1, 2, 3)
+     *     .toJavaMap(i -> Tuple.of(i, (char) (i + 64)))
+     * }</pre>
+     *
+     * @param f   A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K> The key type
+     * @param <V> The value type
+     * @return A new {@link java.util.HashMap}.
+     */
+    default <K, V> java.util.Map<K, V> toJavaMap(Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        return toJavaMap(java.util.HashMap::new, f);
+    }
+
+    /**
+     * Converts this collection to a specific mutable {@link java.util.Map}.
+     * Elements are added by calling {@link java.util.Map#put(Object, Object)}.
+     *
+     * <pre>{@code
+     * // = {1=A, 2=B, 3=C}
+     * List.of(1, 2, 3)
+     *     .toJavaMap(java.util.TreeMap::new, i -> i, i -> (char) (i + 64))
+     * }</pre>
+     *
+     * @param factory     A factory that creates an empty mutable {@code java.util.Map}
+     * @param keyMapper   A function that maps an element to a key
+     * @param valueMapper A function that maps an element to a value
+     * @param <K>         The key type
+     * @param <V>         The value type
+     * @param <MAP>       a sub-type of {@code java.util.Map}
+     * @return a new {@code java.util.Map} of type {@code MAP}
+     */
+    default <K, V, MAP extends java.util.Map<K, V>> MAP toJavaMap(Supplier<MAP> factory, Function<? super T, ? extends K> keyMapper, Function<? super T, ? extends V> valueMapper) {
+        Objects.requireNonNull(keyMapper, "keyMapper is null");
+        Objects.requireNonNull(valueMapper, "valueMapper is null");
+        return toJavaMap(factory, t -> Tuple.of(keyMapper.apply(t), valueMapper.apply(t)));
+    }
+
+    /**
+     * Converts this collection to a specific mutable {@link java.util.Map}.
+     * Elements are added by calling {@link java.util.Map#put(Object, Object)}.
+     *
+     * <pre>{@code
+     * // = {1=A, 2=B, 3=C}
+     * List.of(1, 2, 3)
+     *     .toJavaMap(java.util.TreeMap::new, i -> Tuple.of(i, (char) (i + 64)))
+     * }</pre>
+     *
+     * @param factory A factory that creates an empty mutable {@code java.util.Map}
+     * @param f       A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K>     The key type
+     * @param <V>     The value type
+     * @param <MAP>   a sub-type of {@code java.util.Map}
+     * @return a new {@code java.util.Map} of type {@code MAP}
+     */
+    default <K, V, MAP extends java.util.Map<K, V>> MAP toJavaMap(Supplier<MAP> factory, Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        Objects.requireNonNull(f, "f is null");
+        final MAP map = factory.get();
+        for (T a : this) {
+            final Tuple2<? extends K, ? extends V> entry = f.apply(a);
+            map.put(entry._1, entry._2);
+        }
+        return map;
+    }
+
+    /**
+     * Converts this collection to a mutable {@link java.util.Set}.
+     * Elements are added by calling {@link java.util.Set#add(Object)}.
+     *
+     * <pre>{@code
+     * // = [1, 2, 3]
+     * List.of(1, 2, 3)
+     *     .toJavaSet()
+     * }</pre>
+     *
+     * @return A new {@link java.util.HashSet}.
+     */
+    default java.util.Set<T> toJavaSet() {
+        return Collections.toJavaCollection(this, java.util.HashSet::new, 16);
+    }
+
+    /**
+     * Converts this collection to a specific {@link java.util.Set}.
+     * Elements are added by calling {@link java.util.Set#add(Object)}.
+     *
+     * <pre>{@code
+     * // = [3, 2, 1]
+     * List.of(1, 2, 3)
+     *     .toJavaSet(capacity -> new java.util.TreeSet<>(Comparator.reverseOrder()))
+     * }</pre>
+     *
+     * @param factory A factory that returns an empty mutable {@code java.util.Set} with the specified initial capacity
+     * @param <SET>   a sub-type of {@code java.util.Set}
+     * @return a new {@code java.util.Set} of type {@code SET}
+     */
+    default <SET extends java.util.Set<T>> SET toJavaSet(Function<Integer, SET> factory) {
+        return Collections.toJavaCollection(this, factory);
+    }
+
+    /**
+     * Converts this collection to a sequential {@link java.util.stream.Stream} by calling
+     * {@code StreamSupport.stream(this.spliterator(), false)}.
+     *
+     * <pre>{@code
+     * // Stream containing 1, 2, 3
+     * List.of(1, 2, 3)
+     *     .toJavaStream()
+     * }</pre>
+     *
+     * @return A new sequential {@link java.util.stream.Stream}.
+     * @see Value#spliterator()
+     */
+    default java.util.stream.Stream<T> toJavaStream() {
+        return StreamSupport.stream(spliterator(), false);
+    }
+
+    /**
+     * Converts this collection to a parallel {@link java.util.stream.Stream} by calling
+     * {@code StreamSupport.stream(this.spliterator(), true)}.
+     *
+     * <pre>{@code
+     * // Stream containing 1, 2, 3
+     * List.of(1, 2, 3)
+     *     .toJavaParallelStream()
+     * }</pre>
+     *
+     * @return A new parallel {@link java.util.stream.Stream}.
+     * @see Value#spliterator()
+     */
+    default java.util.stream.Stream<T> toJavaParallelStream() {
+        return StreamSupport.stream(spliterator(), true);
+    }
+
+    /**
+     * Converts this collection to a {@link List}.
+     *
+     * @return A new {@link List}.
+     */
+    default List<T> toList() {
+        if (this instanceof List) {
+            return (List<T>) this;
+        } else if (isEmpty()) {
+            return List.empty();
+        } else {
+            return List.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link Map}.
+     *
+     * @param keyMapper   A function that maps an element to a key
+     * @param valueMapper A function that maps an element to a value
+     * @param <K>         The key type
+     * @param <V>         The value type
+     * @return A new {@link HashMap}.
+     */
+    default <K, V> Map<K, V> toMap(Function<? super T, ? extends K> keyMapper, Function<? super T, ? extends V> valueMapper) {
+        Objects.requireNonNull(keyMapper, "keyMapper is null");
+        Objects.requireNonNull(valueMapper, "valueMapper is null");
+        return toMap(t -> Tuple.of(keyMapper.apply(t), valueMapper.apply(t)));
+    }
+
+    /**
+     * Converts this collection to a {@link Map}.
+     *
+     * @param f   A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K> The key type
+     * @param <V> The value type
+     * @return A new {@link HashMap}.
+     */
+    default <K, V> Map<K, V> toMap(Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        Objects.requireNonNull(f, "f is null");
+        return Collections.toMap(this, HashMap.empty(), HashMap::ofEntries, f);
+    }
+
+    /**
+     * Converts this collection to a linked {@link Map}.
+     *
+     * @param keyMapper   A function that maps an element to a key
+     * @param valueMapper A function that maps an element to a value
+     * @param <K>         The key type
+     * @param <V>         The value type
+     * @return A new {@link LinkedHashMap}.
+     */
+    default <K, V> Map<K, V> toLinkedMap(Function<? super T, ? extends K> keyMapper, Function<? super T, ? extends V> valueMapper) {
+        Objects.requireNonNull(keyMapper, "keyMapper is null");
+        Objects.requireNonNull(valueMapper, "valueMapper is null");
+        return toLinkedMap(t -> Tuple.of(keyMapper.apply(t), valueMapper.apply(t)));
+    }
+
+    /**
+     * Converts this collection to a linked {@link Map}.
+     *
+     * @param f   A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K> The key type
+     * @param <V> The value type
+     * @return A new {@link LinkedHashMap}.
+     */
+    default <K, V> Map<K, V> toLinkedMap(Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        Objects.requireNonNull(f, "f is null");
+        return Collections.toMap(this, LinkedHashMap.empty(), LinkedHashMap::ofEntries, f);
+    }
+
+    /**
+     * Converts this collection to a {@link SortedMap}.
+     *
+     * @param keyMapper   A function that maps an element to a key
+     * @param valueMapper A function that maps an element to a value
+     * @param <K>         The key type
+     * @param <V>         The value type
+     * @return A new {@link TreeMap}.
+     */
+    default <K extends Comparable<? super K>, V> SortedMap<K, V> toSortedMap(Function<? super T, ? extends K> keyMapper, Function<? super T, ? extends V> valueMapper) {
+        Objects.requireNonNull(keyMapper, "keyMapper is null");
+        Objects.requireNonNull(valueMapper, "valueMapper is null");
+        return toSortedMap(t -> Tuple.of(keyMapper.apply(t), valueMapper.apply(t)));
+    }
+
+    /**
+     * Converts this collection to a {@link SortedMap}.
+     *
+     * @param f   A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K> The key type
+     * @param <V> The value type
+     * @return A new {@link TreeMap}.
+     */
+    default <K extends Comparable<? super K>, V> SortedMap<K, V> toSortedMap(Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        Objects.requireNonNull(f, "f is null");
+        return toSortedMap(Comparator.naturalOrder(), f);
+    }
+
+    /**
+     * Converts this collection to a {@link SortedMap}.
+     *
+     * @param comparator  A comparator that induces an order of the Map keys.
+     * @param keyMapper   A function that maps an element to a key
+     * @param valueMapper A function that maps an element to a value
+     * @param <K>         The key type
+     * @param <V>         The value type
+     * @return A new {@link TreeMap}.
+     */
+    default <K, V> SortedMap<K, V> toSortedMap(Comparator<? super K> comparator, Function<? super T, ? extends K> keyMapper, Function<? super T, ? extends V> valueMapper) {
+        Objects.requireNonNull(comparator, "comparator is null");
+        Objects.requireNonNull(keyMapper, "keyMapper is null");
+        Objects.requireNonNull(valueMapper, "valueMapper is null");
+        return toSortedMap(comparator, t -> Tuple.of(keyMapper.apply(t), valueMapper.apply(t)));
+    }
+
+    /**
+     * Converts this collection to a {@link SortedMap}.
+     *
+     * @param comparator A comparator that induces an order of the Map keys.
+     * @param f          A function that maps an element to a key/value pair represented by Tuple2
+     * @param <K>        The key type
+     * @param <V>        The value type
+     * @return A new {@link TreeMap}.
+     */
+    default <K, V> SortedMap<K, V> toSortedMap(Comparator<? super K> comparator, Function<? super T, ? extends Tuple2<? extends K, ? extends V>> f) {
+        Objects.requireNonNull(comparator, "comparator is null");
+        Objects.requireNonNull(f, "f is null");
+        return Collections.toMap(this, TreeMap.empty(comparator), t -> TreeMap.ofEntries(comparator, t), f);
+    }
+
+    /**
+     * Converts this collection to a {@link Queue}.
+     *
+     * @return A new {@link Queue}.
+     */
+    default Queue<T> toQueue() {
+        if (this instanceof Queue) {
+            return (Queue<T>) this;
+        } else if (isEmpty()) {
+            return Queue.empty();
+        } else {
+            return Queue.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link PriorityQueue}.
+     *
+     * @return A new {@link PriorityQueue}.
+     */
+    @SuppressWarnings("unchecked")
+    default PriorityQueue<T> toPriorityQueue() {
+        if (this instanceof PriorityQueue) {
+            return (PriorityQueue<T>) this;
+        } else {
+            final Comparator<T> comparator = (this instanceof Ordered<?>)
+                    ? ((Ordered<T>) this).comparator()
+                    : (Comparator<T>) Comparator.naturalOrder();
+            return toPriorityQueue(comparator);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link PriorityQueue}.
+     *
+     * @param comparator A comparator that induces an order of the PriorityQueue elements.
+     * @return A new {@link PriorityQueue}.
+     */
+    default PriorityQueue<T> toPriorityQueue(Comparator<? super T> comparator) {
+        Objects.requireNonNull(comparator, "comparator is null");
+        if (isEmpty()) {
+            return PriorityQueue.empty(comparator);
+        } else {
+            return PriorityQueue.ofAll(comparator, this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link Set}.
+     *
+     * @return A new {@link HashSet}.
+     */
+    default Set<T> toSet() {
+        if (this instanceof HashSet) {
+            return (HashSet<T>) this;
+        } else if (isEmpty()) {
+            return HashSet.empty();
+        } else {
+            return HashSet.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a linked {@link Set}.
+     *
+     * @return A new {@link LinkedHashSet}.
+     */
+    default Set<T> toLinkedSet() {
+        if (this instanceof LinkedHashSet) {
+            return (LinkedHashSet<T>) this;
+        } else if (isEmpty()) {
+            return LinkedHashSet.empty();
+        } else {
+            return LinkedHashSet.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link SortedSet}.
+     * Current items must be comparable
+     *
+     * @return A new {@link TreeSet}.
+     * @throws ClassCastException if items are not comparable
+     */
+    @SuppressWarnings("unchecked")
+    default SortedSet<T> toSortedSet() throws ClassCastException {
+        if (this instanceof TreeSet<?>) {
+            return (TreeSet<T>) this;
+        } else {
+            final Comparator<T> comparator = (this instanceof Ordered<?>)
+                    ? ((Ordered<T>) this).comparator()
+                    : (Comparator<T>) Comparator.naturalOrder();
+            return toSortedSet(comparator);
+        }
+    }
+
+    /**
+     * Converts this to a {@link SortedSet}.
+     *
+     * @param comparator A comparator that induces an order of the SortedSet elements.
+     * @return A new {@link TreeSet}.
+     */
+    default SortedSet<T> toSortedSet(Comparator<? super T> comparator) {
+        Objects.requireNonNull(comparator, "comparator is null");
+        if (isEmpty()) {
+            return TreeSet.empty(comparator);
+        } else {
+            return TreeSet.ofAll(comparator, this);
+        }
+    }
+
+    /**
+     * Converts this to a {@link Stream}.
+     *
+     * @return A new {@link Stream}.
+     */
+    default Stream<T> toStream() {
+        if (this instanceof Stream) {
+            return (Stream<T>) this;
+        } else if (this.isEmpty()) {
+            return Stream.empty();
+        } else {
+            return Stream.ofAll(this);
+        }
+    }
+
+    /**
+     * Converts this collection to a {@link Vector}.
+     *
+     * @return A new {@link Vector}.
+     */
+    default Vector<T> toVector() {
+        if (this instanceof Vector) {
+            return (Vector<T>) this;
+        } else if (this.isEmpty()) {
+            return Vector.empty();
+        } else {
+            return Vector.ofAll(this);
+        }
+    }
 
     /**
      * Unzips this elements by mapping this elements to a pair of distinct sets.

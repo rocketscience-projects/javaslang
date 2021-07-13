@@ -1230,16 +1230,6 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
         }
     }
 
-    /**
-     * A {@code CharSeq} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
     @Override
     public boolean isEmpty() {
         return back.isEmpty();
@@ -2138,7 +2128,7 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
     public CharSeq substring(int beginIndex, int endIndex) {
         return CharSeq.of(back.substring(beginIndex, endIndex));
     }
-
+    
     @Override
     public String stringPrefix() {
         return "CharSeq";
@@ -2219,16 +2209,13 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
      * given replacement.
      * <p>
      * An invocation of this method of the form
-     * <i>str</i>{@code .replaceFirst(}<i>regex</i>{@code ,} <i>repl</i>{@code )}
+     * <pre>{@code
+     * str.replaceFirst(regex, repl)
+     * }</pre>
      * yields exactly the same result as the expression
-     * <blockquote>
-     * <code>
-     * {@link Pattern}.{@link
-     * Pattern#compile compile}(<i>regex</i>).{@link
-     * Pattern#matcher(CharSequence) matcher}(<i>str</i>).{@link
-     * java.util.regex.Matcher#replaceFirst replaceFirst}(<i>repl</i>)
-     * </code>
-     * </blockquote>
+     * <pre>{@code
+     * Pattern.compile(regex).matcher(str).replaceFirst(repl)
+     * }</pre>
      * Note that backslashes ({@code \}) and dollar signs ({@code $}) in the
      * replacement string may cause the results to be different than if it were
      * being treated as a literal replacement string; see
@@ -2252,21 +2239,18 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
      * given replacement.
      * <p>
      * An invocation of this method of the form
-     * <i>str</i>{@code .replaceAll(}<i>regex</i>{@code ,} <i>repl</i>{@code )}
+     * <pre>{@code
+     * str.replaceAll(regex, repl)
+     * }</pre>
      * yields exactly the same result as the expression
-     * <blockquote>
-     * <code>
-     * {@link Pattern}.{@link
-     * Pattern#compile compile}(<i>regex</i>).{@link
-     * Pattern#matcher(CharSequence) matcher}(<i>str</i>).{@link
-     * java.util.regex.Matcher#replaceAll replaceAll}(<i>repl</i>)
-     * </code>
-     * </blockquote>
+     * <pre>{@code
+     * Pattern.compile(regex).matcher(str).replaceAll(repl)
+     * }</pre>
      * Note that backslashes ({@code \}) and dollar signs ({@code $}) in the
      * replacement string may cause the results to be different than if it were
      * being treated as a literal replacement string; see
-     * {@link java.util.regex.Matcher#replaceAll Matcher.replaceAll}.
-     * Use {@link java.util.regex.Matcher#quoteReplacement} to suppress the special
+     * {@link java.util.regex.Matcher#replaceAll(String)}.
+     * Use {@link java.util.regex.Matcher#quoteReplacement(String)} to suppress the special
      * meaning of these characters, if desired.
      *
      * @param regex       the regular expression to which this string is to be matched
@@ -2387,15 +2371,13 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
      * <td>{@code { "b", "", ":and:f" }}</td></tr>
      * </table></blockquote>
      * An invocation of this method of the form
-     * <i>str.</i>{@code split(}<i>regex</i>{@code ,}&nbsp;<i>n</i>{@code )}
+     * <pre>{@code
+     * str.split(regex, n)
+     * }</pre>
      * yields the same result as the expression
-     * <blockquote>
-     * <code>
-     * {@link Pattern}.{@link
-     * Pattern#compile compile}(<i>regex</i>).{@link
-     * Pattern#split(CharSequence, int) split}(<i>str</i>,&nbsp;<i>n</i>)
-     * </code>
-     * </blockquote>
+     * <pre>{@code
+     * Pattern.compile(regex).split(str, n)
+     * }</pre>
      *
      * @param regex the delimiting regular expression
      * @param limit the result threshold, as described above

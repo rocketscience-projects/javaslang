@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 public class LinkedHashMapTest extends AbstractMapTest {
 
     @Override
-    protected String className() {
+    protected String stringPrefix() {
         return "LinkedHashMap";
     }
 

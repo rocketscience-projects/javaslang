@@ -415,7 +415,7 @@ public abstract class AbstractSeqTest extends AbstractTraversableRangeTest {
 
     @Test
     public void shouldCrossProductPowerBeLazy() {
-        assertThat(range(0, 10).crossProduct(100).take(1).get()).isEqualTo(tabulate(100, i -> 0));
+        assertThat(range(0, 10).crossProduct(100).take(1).head()).isEqualTo(tabulate(100, i -> 0));
     }
 
     @Test

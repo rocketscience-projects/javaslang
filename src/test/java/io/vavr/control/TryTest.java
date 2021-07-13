@@ -34,8 +34,6 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -68,12 +66,6 @@ public class TryTest extends AbstractValueTest {
         return true;
     }
 
-    @Override
-    protected int getPeekNonNilPerformingAnAction() {
-        return 1;
-    }
-
-    @Override
     @Test(expected = NoSuchElementException.class)
     public void shouldGetEmpty() {
         empty().get();
@@ -150,54 +142,6 @@ public class TryTest extends AbstractValueTest {
     public void shouldThrowExceptionOnNullCollectPartialFunction() {
         final PartialFunction<Integer, String> pf = null;
         Try.success(3).collect(pf);
-    }
-
-    // -- exists
-
-    @Test
-    public void shouldBeAwareOfPropertyThatHoldsExistsOfSuccess() {
-        assertThat(Try.success(1).exists(i -> i == 1)).isTrue();
-    }
-
-    @Test
-    public void shouldBeAwareOfPropertyThatNotHoldsExistsOfSuccess() {
-        assertThat(Try.success(1).exists(i -> i == 2)).isFalse();
-    }
-
-    @Test
-    public void shouldNotHoldPropertyExistsOfFailure() {
-        assertThat(failure().exists(e -> true)).isFalse();
-    }
-
-    @Test(expected = Error.class)
-    public void shouldNotHoldPropertyExistsWhenPredicateThrows() {
-        Try.success(1).exists(e -> {
-            throw new Error("error");
-        });
-    }
-
-    // -- forall
-
-    @Test
-    public void shouldBeAwareOfPropertyThatHoldsForAllOfSuccess() {
-        assertThat(Try.success(1).forAll(i -> i == 1)).isTrue();
-    }
-
-    @Test
-    public void shouldBeAwareOfPropertyThatNotHoldsForAllOfSuccess() {
-        assertThat(Try.success(1).forAll(i -> i == 2)).isFalse();
-    }
-
-    @Test // a property holds for all elements of no elements
-    public void shouldNotHoldPropertyForAllOfFailure() {
-        assertThat(failure().forAll(e -> true)).isTrue();
-    }
-
-    @Test(expected = Error.class)
-    public void shouldNotHoldPropertyForAllWhenPredicateThrows() {
-        Try.success(1).forAll(e -> {
-            throw new Error("error");
-        });
     }
 
     // -- orElse
@@ -732,15 +676,9 @@ public class TryTest extends AbstractValueTest {
         failure().get();
     }
 
-    @Test
-    public void shouldThrowUndeclaredThrowableExceptionWhenUsingDynamicProxiesAndGetThrows() {
-        final Value<?> testee = (Value<?>) Proxy.newProxyInstance(
-                Value.class.getClassLoader(),
-                new Class<?>[] { Value.class },
-                (proxy, method, args) -> Try.failure(new Exception()).get());
-        assertThatThrownBy(testee::get)
-                .isInstanceOf(UndeclaredThrowableException.class)
-                .hasCauseExactlyInstanceOf(Exception.class);
+    @Test(expected = Exception.class)
+    public void shouldSneakyThrowCheckedExceptionWhenGetOnFailure() {
+        Try.failure(new Exception()).get();
     }
 
     // -- getOrElse
@@ -959,17 +897,6 @@ public class TryTest extends AbstractValueTest {
         assertThat(failure().toEither().isLeft()).isTrue();
     }
 
-    @Test
-    public void shouldConvertFailureToEitherLeft() {
-        assertThat(failure().toEither("test").isLeft()).isTrue();
-    }
-
-    @Test
-    public void shouldConvertFailureToEitherLeftSupplier() {
-        assertThat(failure().toEither(() -> "test").isLeft()).isTrue();
-    }
-
-
     // -- toValidation
 
     @Test
@@ -986,37 +913,6 @@ public class TryTest extends AbstractValueTest {
         final Validation<String, Object> validation = failure.toValidation(Throwable::toString);
         assertThat(validation.getError()).isEqualTo(failure.getCause().toString());
         assertThat(validation.isInvalid()).isTrue();
-    }
-
-    // -- toCompletableFuture
-
-    @Test
-    public void shouldConvertSuccessToCompletableFuture() {
-        final CompletableFuture<String> future = success().toCompletableFuture();
-        assertThat(future.isDone());
-        assertThat(Try.of(future::get).get()).isEqualTo(success().get());
-    }
-
-    @Test
-    public void shouldConvertFailureToFailedCompletableFuture() {
-        final CompletableFuture<Object> future = failure().toCompletableFuture();
-        assertThat(future.isDone());
-        assertThat(future.isCompletedExceptionally());
-        assertThatThrownBy(future::get)
-                .isExactlyInstanceOf(ExecutionException.class)
-                .hasCauseExactlyInstanceOf(RuntimeException.class);
-    }
-
-    // -- toValidation
-
-    @Test
-    public void shouldConvertFailureToValidationLeft() {
-        assertThat(failure().toValidation("test").isInvalid()).isTrue();
-    }
-
-    @Test
-    public void shouldConvertFailureToValidationLeftSupplier() {
-        assertThat(failure().toValidation(() -> "test").isInvalid()).isTrue();
     }
 
     // -- toJavaOptional
@@ -1205,15 +1101,6 @@ public class TryTest extends AbstractValueTest {
                 .andThen(arr -> arr.add(20))
                 .map(arr -> arr.get(1));
         assertThat(actual.toString()).isEqualTo("Failure(java.lang.NumberFormatException: For input string: \"aaa\")");
-    }
-
-    // peek
-
-    @Test
-    public void shouldPeekFailure() {
-        final List<Object> list = new ArrayList<>();
-        assertThat(failure().peek(list::add)).isEqualTo(failure());
-        assertThat(list.isEmpty()).isTrue();
     }
 
     // equals
@@ -1569,20 +1456,6 @@ public class TryTest extends AbstractValueTest {
         });
         final Try<Void> expected = Try.success(null);
         assertThat(actual).isEqualTo(expected);
-    }
-
-    // peek
-
-    @Test
-    public void shouldPeekSuccess() {
-        final List<Object> list = new ArrayList<>();
-        assertThat(success().peek(list::add)).isEqualTo(success());
-        assertThat(list.isEmpty()).isFalse();
-    }
-
-    @Test(expected = RuntimeException.class)
-    public void shouldPeekSuccessAndThrow() {
-        success().peek(t -> failure().get());
     }
 
     // equals

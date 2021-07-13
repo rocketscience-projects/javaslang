@@ -23,24 +23,22 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.junit.Test;
 
-import java.io.Serializable;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static io.vavr.collection.Iterator.range;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
 public class LazyTest extends AbstractValueTest {
 
+    private static final Lazy<?> EMPTY = Lazy.of(() -> { throw new UnsupportedOperationException(); });
+
     @SuppressWarnings("unchecked")
     @Override
-    protected <T> Undefined<T> empty() {
-        return (Undefined<T>) Undefined.INSTANCE;
+    protected <T> Lazy<T> empty() {
+        return (Lazy<T>) EMPTY;
     }
 
     @Override
@@ -56,12 +54,7 @@ public class LazyTest extends AbstractValueTest {
 
     @Override
     protected boolean useIsEqualToInsteadOfIsSameAs() {
-        return false;
-    }
-
-    @Override
-    protected int getPeekNonNilPerformingAnAction() {
-        return 1;
+        return true;
     }
 
     // -- static narrow
@@ -106,15 +99,6 @@ public class LazyTest extends AbstractValueTest {
         assertThat(iterator.hasNext()).isFalse();
     }
 
-    // -- peek
-
-    @Test
-    public void shouldPeek() {
-        final Lazy<Integer> lazy = Lazy.of(() -> 1);
-        final Lazy<Integer> peek = lazy.peek(v -> assertThat(v).isEqualTo(1));
-        assertThat(peek).isSameAs(lazy);
-    }
-
     // -- sequence(Iterable)
 
     @Test
@@ -156,8 +140,8 @@ public class LazyTest extends AbstractValueTest {
     @Test
     public void shouldFilterOverLazyValue() {
         final Lazy<Integer> testee = Lazy.of(() -> 42);
-        final Option<Integer> expectedPositive = Option.some(42);
-        final Option<Integer> expectedNegative = Option.none();
+        final Lazy<Option<Integer>> expectedPositive = Lazy.of(() -> Option.some(42));
+        final Lazy<Option<Integer>> expectedNegative = Lazy.of(Option::none);
 
         assertThat(testee.filter(i -> i % 2 == 0)).isEqualTo(expectedPositive);
         assertThat(testee.filter(i -> i % 2 != 0)).isEqualTo(expectedNegative);
@@ -166,11 +150,27 @@ public class LazyTest extends AbstractValueTest {
     @Test
     public void shouldFilterNotOverLazyValue() {
         final Lazy<Integer> testee = Lazy.of(() -> 42);
-        final Option<Integer> expectedPositive = Option.some(42);
-        final Option<Integer> expectedNegative = Option.none();
+        final Lazy<Option<Integer>> expectedPositive = Lazy.of(() -> Option.some(42));
+        final Lazy<Option<Integer>> expectedNegative = Lazy.of(Option::none);
 
         assertThat(testee.filterNot(i -> i % 2 != 0)).isEqualTo(expectedPositive);
         assertThat(testee.filterNot(i -> i % 2 == 0)).isEqualTo(expectedNegative);
+    }
+
+    @Test
+    public void shouldPeekLazyValueWithoutPerformingSideEffects() {
+        final Lazy<Integer> testee = Lazy.of(() -> 42);
+        final int[] observer = new int[] { 0 };
+        testee.peek(i -> { observer[0] = i; });
+        assertThat(observer[0]).isEqualTo(0);
+    }
+
+    @Test
+    public void shouldPerformSideEffectOfPeekWhenGettingLazyValue() {
+        final Lazy<Integer> testee = Lazy.of(() -> 42);
+        final int[] observer = new int[] { 0 };
+        testee.peek(i -> { observer[0] = i; }).get();
+        assertThat(observer[0]).isEqualTo(42);
     }
 
     @Test
@@ -181,16 +181,6 @@ public class LazyTest extends AbstractValueTest {
         final Integer actual = testee.transform(lazy -> lazy.get() / 2);
 
         assertThat(actual).isEqualTo(expected);
-    }
-
-    @Test
-    public void shouldNotBeEmpty() {
-        assertThat(Lazy.of(Option::none).isEmpty()).isFalse();
-    }
-
-    @Test
-    public void shouldContainASingleValue() {
-        assertThat(Lazy.of(Option::none).isSingleValued()).isTrue();
     }
 
     // -- val(Supplier, Class) -- Proxy
@@ -279,7 +269,7 @@ public class LazyTest extends AbstractValueTest {
 
     @Test
     @SuppressWarnings({ "StatementWithEmptyBody", "rawtypes" })
-    public void shouldBeConsistentFromMultipleThreads() throws Exception {
+    public void shouldBeConsistentFromMultipleThreads() {
         for (int i = 0; i < 100; i++) {
             final AtomicBoolean canProceed = new AtomicBoolean(false);
             final Vector<CompletableFuture<Void>> futures = Vector.range(0, 10).map(j -> {
@@ -374,105 +364,10 @@ public class LazyTest extends AbstractValueTest {
         assertThat(Lazy.of(() -> 1).spliterator().getExactSizeIfKnown()).isEqualTo(1);
     }
 
-    // === OVERRIDDEN
-
-    // -- isLazy
-
     @Override
     @Test
-    public void shouldVerifyLazyProperty() {
-        assertThat(empty().isLazy()).isTrue();
-        assertThat(of(1).isLazy()).isTrue();
+    public void shouldSerializeDeserializeEmpty() {
+        // disabled
     }
 
-}
-
-/**
- * Lazy can't be empty. It is a placeholder for an existing value, but only evaluated when needed.
- * In order to re-use existing unit tests, that are valid for all Value implementations,
- * we provide here an _imaginary_ empty Lazy implementation, called 'undefined'.
- * <p>
- * Note: It is no good idea to leak it outside of the test scope into the core library (otherwise Undefined will be the new null).
- */
-final class Undefined<T> implements Value<T>, Serializable {
-
-    private static final long serialVersionUID = 1L;
-
-    static final Undefined<?> INSTANCE = new Undefined<>();
-
-    private Lazy<T> prototype = Lazy.of(() -> null);
-
-    private Undefined() {
-    }
-
-    @Override
-    public T get() {
-        throw new NoSuchElementException();
-    }
-
-    @Override
-    public boolean isAsync() {
-        return prototype.isAsync();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return true;
-    }
-
-    @Override
-    public boolean isLazy() {
-        return prototype.isLazy();
-    }
-
-    @Override
-    public boolean isSingleValued() {
-        return prototype.isSingleValued();
-    }
-
-    @Override
-    public Value<T> peek(Consumer<? super T> action) {
-        return this;
-    }
-
-    @Override
-    public String stringPrefix() {
-        return null;
-    }
-
-    @Override
-    public Iterator<T> iterator() {
-        return Iterator.empty();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <U> Value<U> map(Function<? super T, ? extends U> mapper) {
-        return (Value<U>) this;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return o == INSTANCE;
-    }
-
-    @Override
-    public int hashCode() {
-        return 1;
-    }
-
-    @Override
-    public String toString() {
-        return "Lazy()";
-    }
-
-    /**
-     * Instance control for object serialization.
-     *
-     * @return The singleton instance of Undefined.
-     * @see java.io.Serializable
-     */
-    private Object readResolve() {
-        return INSTANCE;
-    }
 }

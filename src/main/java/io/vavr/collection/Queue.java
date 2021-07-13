@@ -913,16 +913,6 @@ public final class Queue<T> extends AbstractQueue<T, Queue<T>> implements Linear
         }
     }
 
-    /**
-     * A {@code Queue} is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
     @Override
     public boolean isEmpty() {
         return front.isEmpty();

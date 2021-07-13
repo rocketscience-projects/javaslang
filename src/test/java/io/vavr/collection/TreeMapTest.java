@@ -41,7 +41,7 @@ import static io.vavr.API.Tuple;
 public class TreeMapTest extends AbstractSortedMapTest {
 
     @Override
-    protected String className() {
+    protected String stringPrefix() {
         return "TreeMap";
     }
 

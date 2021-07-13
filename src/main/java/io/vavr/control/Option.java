@@ -24,9 +24,7 @@ import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 
 import java.io.Serializable;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -45,7 +43,6 @@ import java.util.function.Supplier;
  *
  * @param <T> The type of the optional value.
  */
-@SuppressWarnings("deprecation")
 public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -103,6 +100,12 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
             vector = vector.append(value.get());
         }
         return Option.some(vector);
+    }
+
+    @Override
+    public Spliterator<T> spliterator() {
+        return Spliterators.spliterator(iterator(), isEmpty() ? 0 : 1,
+                Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
     }
 
     /**
@@ -196,7 +199,54 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * Creates {@code Some} of suppliers value if condition is true, or {@code None} in other case
+     * Unless the given {@code condition} is true, returns {@code Option.some(supplier.get())},
+     * otherwise returns {@code Option.none()}.
+     *
+     * <pre>{@code
+     * Supplier<String> supplier = () -> "supplied";
+     *
+     * // = Some("supplied")
+     * Option<String> supplied = Option.unless(false, supplier);
+     *
+     * // = None
+     * Option<String> none = Option.unless(true, supplier);
+     * }</pre>
+     *
+     * @param <T>       value type
+     * @param condition a boolean value
+     * @param supplier  a value supplier
+     * @return {@code Some(supplier.get())} if {@code condition} is false, otherwise {@code None}
+     * @throws NullPointerException if the given {@code supplier} is null
+     */
+    public static <T> Option<T> unless(boolean condition, Supplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        return when(!condition, supplier);
+    }
+
+    /**
+     * Unless the given {@code condition} is true, returns {@code Option.some(value)},
+     * otherwise returns {@code Option.none()}.
+     *
+     * <pre>{@code
+     * // = Some(5)
+     * Option<Integer> option = Option.when(true, 5);
+     *
+     * // = None
+     * Option<Integer> none = Option.when(false, 5);
+     * }</pre>
+     *
+     * @param <T>       type of the value
+     * @param condition a boolean value
+     * @param value     a possibly {@code null} value
+     * @return {@code Some(value)} if {@code condition} is false, otherwise {@code None}
+     */
+    public static <T> Option<T> unless(boolean condition, T value) {
+        return when(!condition, value);
+    }
+
+    /**
+     * When the given {@code condition} is true, returns {@code Option.some(supplier.get())},
+     * otherwise returns {@code Option.none()}.
      *
      * <pre>{@code
      * Supplier<String> supplier = () -> "supplied";
@@ -208,10 +258,10 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * Option<String> none = Option.when(false, supplier);
      * }</pre>
      *
-     * @param <T>       type of the optional value
-     * @param condition A boolean value
-     * @param supplier  An optional value supplier, may supply {@code null}
-     * @return return {@code Some} of supplier's value if condition is true, or {@code None} in other case
+     * @param <T>       value type
+     * @param condition a boolean value
+     * @param supplier  a value supplier
+     * @return {@code Some(supplier.get())} if {@code condition} is true, otherwise {@code None}
      * @throws NullPointerException if the given {@code supplier} is null
      */
     public static <T> Option<T> when(boolean condition, Supplier<? extends T> supplier) {
@@ -220,7 +270,8 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * Creates {@code Some} of value if condition is true, or {@code None} in other case
+     * When the given {@code condition} is true, returns {@code Option.some(value)},
+     * otherwise returns {@code Option.none()}.
      *
      * <pre>{@code
      * // = Some(5)
@@ -230,10 +281,10 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * Option<Integer> none = Option.when(false, 5);
      * }</pre>
      *
-     * @param <T>       type of the optional value
-     * @param condition A boolean value
-     * @param value     An optional value, may be {@code null}
-     * @return return {@code Some} of value if condition is true, or {@code None} in other case
+     * @param <T>       type of the value
+     * @param condition a boolean value
+     * @param value     a possibly {@code null} value
+     * @return {@code Some(value)} if {@code condition} is true, otherwise {@code None}
      */
     public static <T> Option<T> when(boolean condition, T value) {
         return condition ? some(value) : none();
@@ -301,8 +352,12 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      *
      * @return true, if this {@code Option} is empty, false otherwise
      */
-    @Override
     public abstract boolean isEmpty();
+
+    @Override
+    public final Iterator<T> iterator() {
+        return isEmpty() ? Iterator.empty() : Iterator.of(get());
+    }
 
     /**
      * Runs a Java Runnable passed as parameter if this {@code Option} is empty.
@@ -329,24 +384,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * An {@code Option}'s value is computed synchronously.
-     *
-     * <pre>{@code
-     * // Prints "false"
-     * System.out.println(Option.of(1).isAsync());
-     *
-     * // Prints "false"
-     * System.out.println(Option.none().isAsync());
-     * }</pre>
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isAsync() {
-        return false;
-    }
-
-    /**
      * Returns true, if this is {@code Some}, otherwise false, if this is {@code None}.
      * <p>
      * Please note that it is possible to create {@code new Some(null)}, which is defined.
@@ -369,42 +406,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * An {@code Option}'s value is computed eagerly.
-     *
-     * <pre>{@code
-     * // Prints "false"
-     * System.out.println(Option.of(3.14).isLazy());
-     *
-     * // Prints "false"
-     * System.out.println(Option.none().isLazy());
-     * }</pre>
-     *
-     * @return false
-     */
-    @Override
-    public final boolean isLazy() {
-        return false;
-    }
-
-    /**
-     * An {@code Option} is single-valued.
-     *
-     * <pre>{@code
-     * // Prints "true"
-     * System.out.println(Option.of("value").isSingleValued());
-     *
-     * // Prints "true"
-     * System.out.println(Option.none().isSingleValued());
-     * }</pre>
-     *
-     * @return {@code true}
-     */
-    @Override
-    public final boolean isSingleValued() {
-        return true;
-    }
-
-    /**
      * Gets the value if this is a {@code Some} or throws if this is a {@code None}.
      *
      * <pre>{@code
@@ -418,7 +419,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * @return the value
      * @throws NoSuchElementException if this is a {@code None}.
      */
-    @Override
     public abstract T get();
 
     /**
@@ -437,9 +437,31 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * @param other An alternative value
      * @return This value, if this Option is defined or the {@code other} value, if this Option is empty.
      */
-    @Override
     public final T getOrElse(T other) {
         return isEmpty() ? other : get();
+    }
+
+    /**
+     * Returns the value if this is a {@code Some}, otherwise {@code supplier.get()} is returned.
+     * <p>
+     * Please note, that the alternate value is lazily evaluated.
+     *
+     * <pre>{@code
+     * Supplier<Double> supplier = () -> 5.342;
+     *
+     * // = 1.2
+     * Option.of(1.2).getOrElse(supplier);
+     *
+     * // = 5.342
+     * Option.none().getOrElse(supplier);
+     * }</pre>
+     *
+     * @param supplier An alternative value supplier
+     * @return This value, if this Option is defined or the {@code other} value, if this Option is empty.
+     */
+    public final T getOrElse(Supplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        return isEmpty() ? supplier.get() : get();
     }
 
     /**
@@ -487,47 +509,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * Returns this {@code Option} if this is defined, or {@code null} if it is empty.
-     *
-     * <pre>{@code
-     * // = Some("Hello World")
-     * Option.of("Hello World").orNull();
-     *
-     * // = null
-     * Option.none().orNull();
-     * }</pre>
-     *
-     * @return this value if it is defined, or {@code null} if it is empty.
-     */
-    public final T orNull() {
-        return isEmpty() ? null : get();
-    }
-
-    /**
-     * Returns the value if this is a {@code Some}, otherwise {@code supplier.get()} is returned.
-     * <p>
-     * Please note, that the alternate value is lazily evaluated.
-     *
-     * <pre>{@code
-     * Supplier<Double> supplier = () -> 5.342;
-     *
-     * // = 1.2
-     * Option.of(1.2).getOrElse(supplier);
-     *
-     * // = 5.342
-     * Option.none().getOrElse(supplier);
-     * }</pre>
-     *
-     * @param supplier An alternative value supplier
-     * @return This value, if this Option is defined or the {@code other} value, if this Option is empty.
-     */
-    @Override
-    public final T getOrElse(Supplier<? extends T> supplier) {
-        Objects.requireNonNull(supplier, "supplier is null");
-        return isEmpty() ? supplier.get() : get();
-    }
-
-    /**
      * Returns the value if this is a {@code Some}, otherwise throws an exception.
      *
      * <pre>{@code
@@ -545,7 +526,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * @return This value, if this Option is defined, otherwise throws X
      * @throws X a throwable
      */
-    @Override
     public final <X extends Throwable> T getOrElseThrow(Supplier<X> exceptionSupplier) throws X {
         Objects.requireNonNull(exceptionSupplier, "exceptionSupplier is null");
         if (isEmpty()) {
@@ -648,7 +628,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
      * @param <U>    The new value type
      * @return a new {@code Some} containing the mapped value if this Option is defined, otherwise {@code None}, if this is empty.
      */
-    @Override
     public final <U> Option<U> map(Function<? super T, ? extends U> mapper) {
         Objects.requireNonNull(mapper, "mapper is null");
         return isEmpty() ? none() : some(mapper.apply(get()));
@@ -699,31 +678,6 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
     }
 
     /**
-     * Applies an action to this value, if this option is defined, otherwise does nothing.
-     *
-     * <pre>{@code
-     * Consumer<Integer> print = i -> System.out.println(i);
-     *
-     * // Prints 5 and creates Some(8)
-     * Option.of(5).peek(print).map(i -> i + 3);
-     *
-     * // Does not print anything
-     * Option.<Integer>none().peek(print);
-     * }</pre>
-     *
-     * @param action An action which can be applied to an optional value
-     * @return this {@code Option}
-     */
-    @Override
-    public final Option<T> peek(Consumer<? super T> action) {
-        Objects.requireNonNull(action, "action is null");
-        if (isDefined()) {
-            action.accept(get());
-        }
-        return this;
-    }
-
-    /**
      * Transforms this {@code Option}.
      *
      * <pre>{@code
@@ -746,9 +700,73 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
         return f.apply(this);
     }
 
-    @Override
-    public final Iterator<T> iterator() {
-        return isEmpty() ? Iterator.empty() : Iterator.of(get());
+    /**
+     * Converts this {@code Option} to a {@link java.util.Optional}.
+     *
+     * <pre>{@code
+     * // = Optional[1]
+     * Option.some(1).toJavaOptional();
+     *
+     * // = Optional.empty
+     * Option.some(null).toJavaOptional();
+     *
+     * // = Optional.empty
+     * Option.none().toJavaOptional();
+     * }</pre>
+     *
+     * @return A new {@link java.util.Optional}.
+     */
+    public Optional<T> toJavaOptional() {
+        return isEmpty() ? Optional.empty() : Optional.ofNullable(get());
+    }
+
+    /**
+     * Converts this to an {@link Either}.
+     *
+     * @param left A left value for the {@link Either}
+     * @param <L>  Either left component type
+     * @return A new {@link Either}.
+     */
+    public <L> Either<L, T> toEither(L left) {
+        return isEmpty() ? Either.left(left) : Either.right(get());
+    }
+
+    /**
+     * Converts this to an {@link Either}.
+     *
+     * @param leftSupplier A {@link Supplier} for the left value for the {@link Either}
+     * @param <L>          Validation error component type
+     * @return A new {@link Either}.
+     */
+    public <L> Either<L, T> toEither(Supplier<? extends L> leftSupplier) {
+        Objects.requireNonNull(leftSupplier, "leftSupplier is null");
+        return isEmpty() ? Either.left(leftSupplier.get()) : Either.right(get());
+    }
+
+    /**
+     * Converts this to a {@link Try}.
+     * <p>
+     * If this value is undefined, i.e. empty, then a new {@code Failure(NoSuchElementException)} is returned,
+     * otherwise a new {@code Success(value)} is returned.
+     *
+     * @return A new {@link Try}.
+     */
+    public Try<T> toTry() {
+        return isEmpty() ? Try.failure(new NoSuchElementException()) : Try.success((get()));
+    }
+
+    /**
+     * Converts this to a {@link Try}.
+     * <p>
+     * If this value is undefined, i.e. empty, then a new {@code Failure(ifEmpty.get())} is returned,
+     * otherwise a new {@code Success(value)} is returned.
+     *
+     * @param ifEmpty an exception supplier
+     * @return A new {@link Try}.
+     */
+    public Try<T> toTry(Supplier<? extends Throwable> ifEmpty) {
+        Objects.requireNonNull(ifEmpty, "ifEmpty is null");
+        return isEmpty() ? Try.failure(ifEmpty.get()) : Try.success(get());
     }
 
     /**
@@ -796,13 +814,8 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
         }
 
         @Override
-        public String stringPrefix() {
-            return "Some";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix() + "(" + value + ")";
+            return "Some(" + value + ")";
         }
     }
 
@@ -849,13 +862,8 @@ public abstract class Option<T> implements Iterable<T>, io.vavr.Value<T>, Serial
         }
 
         @Override
-        public String stringPrefix() {
-            return "None";
-        }
-
-        @Override
         public String toString() {
-            return stringPrefix();
+            return "None";
         }
 
         // -- Serializable implementation

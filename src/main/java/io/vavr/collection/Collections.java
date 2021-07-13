@@ -167,6 +167,19 @@ final class Collections {
         return tabulate(n, ignored -> supplier.get());
     }
 
+    static <T, R extends java.util.Collection<T>> R toJavaCollection(
+            Traversable<T> source, Function<Integer, R> containerSupplier) {
+        return toJavaCollection(source, containerSupplier, 16);
+    }
+
+    static <T, R extends java.util.Collection<T>> R toJavaCollection(
+            Traversable<T> source, Function<Integer, R> containerSupplier, int defaultInitialCapacity) {
+        final int size = source.isTraversableAgain() && !source.isLazy() ? source.size() : defaultInitialCapacity;
+        final R container = containerSupplier.apply(size);
+        source.forEach(container::add);
+        return container;
+    }
+
     static <T, R> Collector<T, ArrayList<T>, R> toListAndThen(Function<ArrayList<T>, R> finisher) {
         final Supplier<ArrayList<T>> supplier = ArrayList::new;
         final BiConsumer<ArrayList<T>, T> accumulator = ArrayList::add;
@@ -175,6 +188,15 @@ final class Collections {
             return left;
         };
         return Collector.of(supplier, accumulator, combiner, finisher);
+    }
+
+    static <T, K, V, E extends Tuple2<? extends K, ? extends V>, R extends Map<K, V>> R toMap(
+            Traversable<T> source, R empty, Function<Iterable<E>, R> ofAll, Function<? super T, ? extends E> f) {
+        if (source.isEmpty()) {
+            return empty;
+        } else {
+            return ofAll.apply(Iterator.ofAll(source).map(f));
+        }
     }
 
     static <T> Iterator<T> fillObject(int n, T element) {

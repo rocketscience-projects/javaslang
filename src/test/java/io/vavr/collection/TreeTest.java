@@ -58,6 +58,11 @@ public class TreeTest extends AbstractTraversableTest {
     private final Tree<Integer> tree = $(1, $(2, $(4, $(7)), $(5)), $(3, $(6, $(8), $(9))));
 
     @Override
+    protected String stringPrefix() {
+        return "Tree";
+    }
+
+    @Override
     protected <T> IterableAssert<T> assertThat(Iterable<T> actual) {
         return new IterableAssert<T>(actual) {
             @SuppressWarnings("unchecked")
@@ -392,7 +397,7 @@ public class TreeTest extends AbstractTraversableTest {
 
     @Test
     public void shouldNotGetValueOfNonNil() {
-        assertThat(tree.get()).isEqualTo(1);
+        assertThat(tree.getValue()).isEqualTo(1);
     }
 
     // -- size
@@ -696,7 +701,7 @@ public class TreeTest extends AbstractTraversableTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = $(42, $(2), $(3)).transform(v -> String.valueOf(v.get()));
+        final String transformed = $(42, $(2), $(3)).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 
@@ -750,14 +755,6 @@ public class TreeTest extends AbstractTraversableTest {
     public void shouldSerializeDeserializeComplexTree() {
         final Object actual = Serializables.deserialize(Serializables.serialize(tree));
         assertThat(actual).isEqualTo(tree);
-    }
-
-    // -- toVector
-
-    @Test
-    public void shouldReturnSelfOnConvertToTree() {
-        final Value<Integer> value = of(1, 2, 3);
-        assertThat(value.toTree()).isSameAs(value);
     }
 
     // ~~~~~~~ DISABLED TESTS ~~~~~~~

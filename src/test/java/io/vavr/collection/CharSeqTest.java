@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static io.vavr.OutputTester.*;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -1053,14 +1052,6 @@ public class CharSeqTest {
         assertThat(CharSeq.of('1', '2', '3').initOption()).isEqualTo(Option.some(CharSeq.of('1', '2')));
     }
 
-    // -- isAsync
-
-    @Test
-    public void shouldVerifyAsyncProperty() {
-        assertThat(CharSeq.empty().isAsync()).isFalse();
-        assertThat(CharSeq.of('1').isAsync()).isFalse();
-    }
-
     // -- isLazy
 
     @Test
@@ -1755,34 +1746,6 @@ public class CharSeqTest {
         assertThat(CharSeq.of('a', 'b', 'c').startsWith(CharSeq.of('b', 'd'), 1)).isFalse();
     }
 
-    // -- stderr
-
-    @Test
-    public void shouldWriteToStderr() {
-        assertThat(captureErrOut(()->CharSeq.of('1', '2', '3').stderr())).isEqualTo("1\n" +
-                "2\n" +
-                "3\n");
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void shouldHandleStderrIOException() {
-        withFailingErrOut(()->CharSeq.of('0').stderr());
-    }
-
-    // -- stdout
-
-    @Test
-    public void shouldWriteToStdout() {
-        assertThat(captureStdOut(()->CharSeq.of('1', '2', '3').stdout())).isEqualTo("1\n" +
-                "2\n" +
-                "3\n");
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void shouldHandleStdoutIOException() {
-        withFailingStdOut(()->CharSeq.of('0').stdout());
-    }
-
     // -- sum
 
     @Test
@@ -2077,13 +2040,6 @@ public class CharSeqTest {
         expected.add('1');
         expected.add('3');
         assertThat(CharSeq.of('1', '2', '2', '3').toJavaSet()).isEqualTo(expected);
-    }
-
-    // -- stringPrefix
-
-    @Test
-    public void shouldReturnStringPrefix() {
-        assertThat(CharSeq.of('1').stringPrefix()).isEqualTo("CharSeq");
     }
 
     // ++++++ OBJECT ++++++
@@ -3398,7 +3354,7 @@ public class CharSeqTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = CharSeq.of('0').transform(v -> String.valueOf(v.get()));
+        final String transformed = CharSeq.of('0').transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("0");
     }
 

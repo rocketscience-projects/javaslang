@@ -78,7 +78,6 @@ import java.util.function.*;
  * <ul>
  * <li>{@link #bimap(Function, Function)}</li>
  * <li>{@link #flatMap(BiFunction)}</li>
- * <li>{@link #lift()}</li>
  * <li>{@link #map(BiFunction)}</li>
  * <li>{@link #mapKeys(Function)}</li>
  * <li>{@link #mapKeys(Function, BiFunction)}</li>
@@ -395,15 +394,6 @@ public interface Map<K, V> extends Traversable<Tuple2<K, V>>, PartialFunction<K,
     @Override
     default int length() {
         return size();
-    }
-
-    /**
-     * Turns this map into a plain function returning an Option result.
-     *
-     * @return a function that takes a key k and returns its value in a Some if found, otherwise a None.
-     */
-    default Function1<K, Option<V>> lift() {
-        return this::get;
     }
 
     /**

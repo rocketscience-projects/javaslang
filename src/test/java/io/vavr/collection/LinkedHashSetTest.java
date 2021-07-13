@@ -13,6 +13,11 @@ import java.util.stream.Collector;
 public class LinkedHashSetTest extends AbstractSetTest {
 
     @Override
+    protected String stringPrefix() {
+        return "LinkedHashSet";
+    }
+
+    @Override
     protected <T> Collector<T, ArrayList<T>, LinkedHashSet<T>> collector() {
         return LinkedHashSet.collector();
     }
@@ -233,7 +238,7 @@ public class LinkedHashSetTest extends AbstractSetTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        final String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

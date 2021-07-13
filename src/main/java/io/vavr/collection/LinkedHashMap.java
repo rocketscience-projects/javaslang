@@ -655,16 +655,6 @@ public final class LinkedHashMap<K, V> implements Map<K, V>, Serializable {
         return Maps.initOption(this);
     }
 
-    /**
-     * An {@code LinkedHashMap}'s value is computed synchronously.
-     *
-     * @return false
-     */
-    @Override
-    public boolean isAsync() {
-        return false;
-    }
-
     @Override
     public boolean isEmpty() {
         return map.isEmpty();

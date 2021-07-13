@@ -41,7 +41,8 @@ final class PrimeNumbers {
         } else {
             return primeFactors(num)
                     .map(p -> HashMap.of(Tuple.of(p, 1L))
-                            .merge(factorization(num / p), (a, b) -> a + b))
+                            .merge(factorization(num / p), Long::sum))
+                    .headOption()
                     .getOrElse(HashMap::empty);
         }
     }

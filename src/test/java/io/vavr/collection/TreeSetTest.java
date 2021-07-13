@@ -38,6 +38,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 public class TreeSetTest extends AbstractSortedSetTest {
 
     @Override
+    protected String stringPrefix() {
+        return "TreeSet";
+    }
+
+    @Override
     protected <T> Collector<T, ArrayList<T>, ? extends TreeSet<T>> collector() {
         return TreeSet.collector(naturalComparator());
     }
@@ -460,7 +465,7 @@ public class TreeSetTest extends AbstractSortedSetTest {
 
     @Test
     public void shouldTransform() {
-        final String transformed = of(42).transform(v -> String.valueOf(v.get()));
+        final String transformed = of(42).transform(v -> String.valueOf(v.head()));
         assertThat(transformed).isEqualTo("42");
     }
 

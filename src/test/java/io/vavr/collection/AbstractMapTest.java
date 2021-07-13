@@ -132,8 +132,6 @@ public abstract class AbstractMapTest extends AbstractTraversableTest {
         return emptyMap();
     }
 
-    protected abstract String className();
-
     abstract <T1, T2> java.util.Map<T1, T2> javaEmptyMap();
 
     protected abstract <T1 extends Comparable<? super T1>, T2> Map<T1, T2> emptyMap();
@@ -522,8 +520,8 @@ public abstract class AbstractMapTest extends AbstractTraversableTest {
 
     @Test
     public void shouldMakeString() {
-        assertThat(emptyMap().toString()).isEqualTo(className() + "()");
-        assertThat(emptyInt().put(1, 2).toString()).isEqualTo(className() + "(" + Tuple.of(1, 2) + ")");
+        assertThat(emptyMap().toString()).endsWith("Map()");
+        assertThat(emptyInt().put(1, 2).toString()).endsWith("Map(" + Tuple.of(1, 2) + ")");
     }
 
     // -- toJavaMap
@@ -1186,13 +1184,6 @@ public abstract class AbstractMapTest extends AbstractTraversableTest {
     public void mapOfEntriesShouldReturnTheSingletonEmpty() {
         if (!emptyMapShouldBeSingleton()) { return; }
         assertThat(mapOfEntries()).isSameAs(emptyMap());
-    }
-
-    @Test
-    public void lift() {
-        final Function1<String, Option<Integer>> lifted = mapOf("A", 1).lift();
-        assertThat(lifted.apply("A").get()).isEqualTo(1);
-        assertThat(lifted.apply("a").isEmpty()).isTrue();
     }
 
     // -- filter

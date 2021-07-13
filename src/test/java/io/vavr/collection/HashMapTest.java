@@ -34,7 +34,7 @@ import java.util.stream.Stream;
 public class HashMapTest extends AbstractMapTest {
 
     @Override
-    protected String className() {
+    protected String stringPrefix() {
         return "HashMap";
     }
 
