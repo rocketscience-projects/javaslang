@@ -441,6 +441,11 @@ abstract class AbstractMultimap<K, V, M extends Multimap<K, V>> implements Multi
         return (M) this;
     }
 
+    @Override
+    public M tapEach(Consumer<? super Tuple2<K, V>> action) {
+        return peek(action);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public M replace(Tuple2<K, V> currentElement, Tuple2<K, V> newElement) {

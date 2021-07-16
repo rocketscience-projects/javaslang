@@ -589,4 +589,12 @@ final class Collections {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    static <T, C extends Traversable<T>> C tapEach(C source, Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action must not be null");
+        return (C) source.map(t -> {
+            action.accept(t);
+            return t;
+        });
+    }
 }

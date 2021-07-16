@@ -1294,6 +1294,11 @@ public abstract class Stream<T> implements LinearSeq<T> {
     }
 
     @Override
+    public final Stream<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public final Stream<Stream<T>> permutations() {
         if (isEmpty()) {
             return Empty.instance();

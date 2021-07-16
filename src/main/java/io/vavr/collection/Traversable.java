@@ -1154,6 +1154,9 @@ public interface Traversable<T> extends Iterable<T>, Foldable<T>, io.vavr.Value<
     @Override
     Traversable<T> peek(Consumer<? super T> action);
 
+
+    Traversable<T> tapEach(Consumer<? super T> action);
+
     /**
      * Calculates the product of this elements. Supported component types are {@code Byte}, {@code Double}, {@code Float},
      * {@code Integer}, {@code Long}, {@code Short}, {@code BigInteger} and {@code BigDecimal}.

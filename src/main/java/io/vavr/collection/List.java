@@ -1117,6 +1117,11 @@ public abstract class List<T> implements LinearSeq<T> {
     }
 
     @Override
+    public List<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public final List<List<T>> permutations() {
         if (isEmpty()) {
             return Nil.instance();

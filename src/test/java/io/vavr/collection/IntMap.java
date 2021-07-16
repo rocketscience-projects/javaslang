@@ -248,6 +248,11 @@ public final class IntMap<T> implements Traversable<T>, Serializable {
     }
 
     @Override
+    public IntMap<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public IntMap<T> replace(T currentElement, T newElement) {
         final Option<Tuple2<Integer, T>> currentEntryOpt = original.find(e -> e._2.equals(currentElement));
         if (currentEntryOpt.isDefined()) {

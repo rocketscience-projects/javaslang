@@ -806,6 +806,11 @@ public final class TreeSet<T> implements SortedSet<T>, Serializable {
     }
 
     @Override
+    public TreeSet<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public TreeSet<T> remove(T element) {
         return new TreeSet<>(tree.delete(element));
     }

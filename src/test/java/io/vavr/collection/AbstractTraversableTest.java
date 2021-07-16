@@ -42,12 +42,20 @@ import static org.assertj.core.api.Assertions.within;
 
 public abstract class AbstractTraversableTest extends AbstractValueTest {
 
+    protected final boolean isLazy() {
+        return empty().isLazy();
+    }
+
     protected final boolean isTraversableAgain() {
         return empty().isTraversableAgain();
     }
 
     protected final boolean isOrdered() {
         return empty().isOrdered();
+    }
+
+    protected final boolean isSequential() {
+        return empty().isSequential();
     }
 
     protected abstract <T> Collector<T, ArrayList<T>, ? extends Traversable<T>> collector();
@@ -2845,6 +2853,64 @@ public abstract class AbstractTraversableTest extends AbstractValueTest {
     public void ofAllShouldReturnTheSingletonEmpty() {
         if (!emptyShouldBeSingleton()) { return; }
         assertThat(ofAll(io.vavr.collection.Iterator.empty())).isSameAs(empty());
+    }
+
+    // eager traversable shall apply action immediately
+
+    @Test
+    public void tapEachShouldThrowIfActionIsNull() {
+        assertThatThrownBy(() -> of("one", "two", "three").tapEach(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+    @Test
+    public void tapEachShouldDoNothingOnLazyTraversableUntilElementsMaterialized() {
+        // test is meaningful for lazy Traversable<T> only
+        if (isLazy()) {
+            String errorMessage = "tapEach() must not call effect on lazy Traversable<T> before its elements are materialized";
+            of("one", "two", "three").tapEach(__ -> fail(errorMessage)); // note: no elements materialized yet
+        }
+    }
+
+    @Test
+    public void tapEachShouldDoNothingOnEmptyTraversable() {
+        empty()
+                .tapEach(__ -> fail("tapEach() must never call effect on empty Traversable<T>"))
+                .forEach(__ -> {}); // enforcing all elements to materialize
+    }
+
+    @Test
+    public void tapEachShouldApplyEffectToEveryElementExactlyOnce() {
+        String[] values = {"one", "two", "three"};
+        // some collections may not guarantee the order of effect applications,
+        // so here we'll assert the 'exactly once' property only
+        java.util.Map<String, Integer> effectCallCounter = new java.util.HashMap<>();
+
+        // instantiating a Traversable<T> from elements provided, tappping each element
+        // and forcing all of its elements to materialize
+        of(values)
+                .tapEach(element -> effectCallCounter.compute(element, (__, v) -> v == null ? 1 : v + 1))
+                .forEach(__ -> {});
+
+        assertThat(effectCallCounter.get("one")).isEqualTo(1); // effect called for value "one" exactly once
+        assertThat(effectCallCounter.get("two")).isEqualTo(1); // ... for value "two" exactly once
+        assertThat(effectCallCounter.get("three")).isEqualTo(1); // ... for value "three" exactly once
+        assertThat(effectCallCounter.size()).isEqualTo(values.length);
+    }
+
+    @Test
+    public void tapEachShouldApplyEffectToEveryElementInOrder() {
+        // testing effects order is for ordered Traversable<T> only
+        if (this.isSequential()) {
+            String[] values = {"one", "two", "three"};
+            java.util.List<String> effectCallLog = new java.util.ArrayList<>();
+            // instantiating a Traversable<T> from elements provided, tappping each element
+            // and forcing all of its elements to materialize
+            of(values)
+                    .tapEach(element -> effectCallLog.add(element))
+                    .forEach(__ -> {});
+
+            assertThat(effectCallLog).isEqualTo(Arrays.asList(values));
+        }
     }
 
     private void testCollector(Runnable test) {

@@ -1070,6 +1070,16 @@ public final class Array<T> implements IndexedSeq<T>, Serializable {
     }
 
     @Override
+    public Array<T> tapEach(Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action is null");
+        for (int i = 0; i < length(); i++) {
+            final T value = get(i);
+            action.accept(value);
+        }
+        return this;
+    }
+
+    @Override
     public Array<Array<T>> permutations() {
         if (isEmpty()) {
             return empty();

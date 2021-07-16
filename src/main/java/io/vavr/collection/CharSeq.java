@@ -747,6 +747,15 @@ public final class CharSeq implements CharSequence, IndexedSeq<Character>, Seria
     }
 
     @Override
+    public CharSeq tapEach(Consumer<? super Character> action) {
+        Objects.requireNonNull(action, "action is null");
+        for (int i = 0; i < back.length(); i++) {
+            action.accept(get(i));
+        }
+        return this;
+    }
+
+    @Override
     public IndexedSeq<CharSeq> permutations() {
         if (isEmpty()) {
             return Vector.empty();

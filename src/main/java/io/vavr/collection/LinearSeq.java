@@ -215,6 +215,9 @@ public interface LinearSeq<T> extends Seq<T> {
     LinearSeq<T> peek(Consumer<? super T> action);
 
     @Override
+    LinearSeq<T> tapEach(Consumer<? super T> action);
+
+    @Override
     LinearSeq<? extends LinearSeq<T>> permutations();
 
     @Override

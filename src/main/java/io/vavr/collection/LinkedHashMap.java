@@ -756,6 +756,11 @@ public final class LinkedHashMap<K, V> implements Map<K, V>, Serializable {
     }
 
     @Override
+    public LinkedHashMap<K, V> tapEach(Consumer<? super Tuple2<K, V>> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public <U extends V> LinkedHashMap<K, V> put(K key, U value, BiFunction<? super V, ? super U, ? extends V> merge) {
         return Maps.put(this, key, value, merge);
     }

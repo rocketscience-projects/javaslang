@@ -736,6 +736,11 @@ public final class HashSet<T> implements Set<T>, Serializable {
     }
 
     @Override
+    public HashSet<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public HashSet<T> remove(T element) {
         final HashArrayMappedTrie<T, T> newTree = tree.remove(element);
         return (newTree == tree) ? this : new HashSet<>(newTree);

@@ -476,6 +476,11 @@ public abstract class BitSet<T> implements SortedSet<T>, Serializable {
     }
 
     @Override
+    public final BitSet<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+    
+    @Override
     public final String stringPrefix() {
         return "BitSet";
     }

@@ -28,10 +28,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Collector;
 
 /**
@@ -649,6 +646,10 @@ public final class PriorityQueue<T> extends io.vavr.collection.AbstractQueue<T, 
         return (Comparator<T>) comparator;
     }
 
+    @Override
+    public PriorityQueue<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
 
     /**
      * fun deleteMin [] = raise EMPTY

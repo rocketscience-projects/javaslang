@@ -899,6 +899,11 @@ public final class Vector<T> implements IndexedSeq<T>, Serializable {
         }
         return this;
     }
+    
+    @Override
+    public Vector<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
 
     @Override
     public Vector<Vector<T>> permutations() {

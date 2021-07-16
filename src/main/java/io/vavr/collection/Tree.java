@@ -652,6 +652,11 @@ public abstract class Tree<T> implements Traversable<T>, Serializable {
     }
 
     @Override
+    public final Tree<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public final Tree<T> replace(T currentElement, T newElement) {
         if (isEmpty()) {
             return Empty.instance();

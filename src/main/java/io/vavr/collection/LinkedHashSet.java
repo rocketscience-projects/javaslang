@@ -757,6 +757,11 @@ public final class LinkedHashSet<T> implements Set<T>, Serializable {
     }
 
     @Override
+    public LinkedHashSet<T> tapEach(Consumer<? super T> action) {
+        return Collections.tapEach(this, action);
+    }
+
+    @Override
     public LinkedHashSet<T> remove(T element) {
         final LinkedHashMap<T, Object> newMap = map.remove(element);
         return (newMap == map) ? this : new LinkedHashSet<>(newMap);

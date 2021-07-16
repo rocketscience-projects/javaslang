@@ -1758,6 +1758,11 @@ public interface Iterator<T> extends java.util.Iterator<T>, Traversable<T> {
     }
 
     @Override
+    default Iterator<T> tapEach(Consumer<? super T> action) {
+        return peek(action);
+    }
+
+    @Override
     default T reduceLeft(BiFunction<? super T, ? super T, ? extends T> op) {
         Objects.requireNonNull(op, "op is null");
         if (isEmpty()) {
